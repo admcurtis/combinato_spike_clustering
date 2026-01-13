@@ -17,6 +17,7 @@ stims["concept_cell"] = np.where(
     stims["median_spikes"] > stims["sigma"],
     1,
     0
+
 )
 
 concepts = stims[stims["concept_cell"] == 1]
