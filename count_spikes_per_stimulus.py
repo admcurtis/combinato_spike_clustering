@@ -57,16 +57,10 @@ for sensor_path in sensor_paths:
 
     neg_spikes, neg_times = spike_utils.load_spike_data(sensor_path, ppt_num, sensor)
 
-    # load sorting file containing cluster labels
-    try:
-        neg_sort_file = f"{sensor_path}/sort_neg_ada/sort_cat.h5"
-        neg_sort_data = h5py.File(neg_sort_file, "r")
-    except FileNotFoundError:
-        print(f"No units detected for ppt{ppt_num} sensor{sensor}")
-        continue
+    neg_cluster_indx = spike_utils.load_cluster_labels(ppt_num, sensor, sensor_path)
 
-    # labels for which spikes are in which cluster
-    neg_cluster_indx = np.array(neg_sort_data["classes"])
+    if neg_cluster_indx is None:
+        continue
 
     # Sort the spikes into thier clusters
     neg_clusters = sort_cluster_times(neg_cluster_indx, neg_times)
