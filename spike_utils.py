@@ -55,7 +55,7 @@ def load_cluster_labels(ppt_num, sensor, sensor_path):
         return None
 
 
-def sort_cluster_times(cluster_labs, spike_times) -> dict[str, np.ndarray[float]]:
+def sort_spikes_by_cluster(cluster_labs, spike_times) -> dict[str, np.ndarray[float]]:
     """
     Takes a list of spike times and an equal length list of the cluster labels for each 
     spike. Returns a dictionary where cluster labels are keys and np.arrays of spikes for
