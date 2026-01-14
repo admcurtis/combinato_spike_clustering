@@ -53,8 +53,38 @@ def load_cluster_labels(ppt_num, sensor, sensor_path):
     except FileNotFoundError:
         print(f"No units detected for ppt{ppt_num} sensor{sensor}")
         return None
-    
 
+
+def sort_cluster_times(cluster_labs, spike_times) -> dict[str, np.ndarray[float]]:
+    """
+    Takes a list of spike times and an equal length list of the cluster labels for each 
+    spike. Returns a dictionary where cluster labels are keys and np.arrays of spikes for
+    that cluster are values
+
+    Indexing starts at 1 becuase cluster label of 0 means unassigned spikes. 
+    """
+
+    return  {
+        cluster: spike_times[cluster_labs == cluster]
+        for cluster in range(1, len(np.unique(cluster_labs))) 
+    }
+
+
+def load_behave_data(ppt_num):
+    """
+    Take a participant number, loads their behavioural data and returns and array of 
+    stimuli and an array of their presentation times. 
+    """
+
+    behave_data = loadmat(
+        f"./screeningData/20191202-041757-{ppt_num}-screeningData.mat",
+        struct_as_record=False,
+        squeeze_me=True
+    )
+
+    behave_output = behave_data["out"]
+
+    return behave_output
 
 
 

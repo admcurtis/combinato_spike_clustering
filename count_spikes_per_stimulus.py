@@ -14,40 +14,7 @@ data_path = "./processed_data/"
 sensor_paths = glob(f"{data_path}*/ppt*/", recursive = True)
 sensor_paths = [os.path.normpath(path) for path in sensor_paths]
 
-#%% FUNCTIONS
-def sort_cluster_times(cluster_labs, spike_times) -> dict[str, np.ndarray[float]]:
-    """
-    Takes a list of spike times and an equal length list of the cluster labels for each 
-    spike. Returns a dictionary where cluster labels are keys and np.arrays of spikes for
-    that cluster are values
-
-    Indexing starts at 1 becuase cluster label of 0 means unassigned spikes. 
-    """
-
-    return  {
-        cluster: spike_times[cluster_labs == cluster]
-        for cluster in range(1, len(np.unique(cluster_labs))) 
-    }
-
-
-def add_units_with_no_spikes(row):
-    """
-    A column in the final data is `total_spikes` each row contains a list where each
-    element is the number of spikes per stimulus presentation.
-
-    For some presentations there were no spikes. This function adds those 0's to the list
-    to ensure all lists are of appropriate length. This is required for calculating
-    the descriptive stats.
-
-    This is a bit hacky but it works. 
-    """
-
-    n = 300 if row["stimulus"] == "BASELINE" else 6
-    spike_list = row["total_spikes"].copy()
-    spike_list.extend([0] * n)
-    spike_list = spike_list[:n]
-    return spike_list
-
+sensor_paths = [sensor_paths[0]]
 
 #%% MAIN SCRIPT
 all_dfs = []
@@ -57,38 +24,33 @@ for sensor_path in sensor_paths:
 
     neg_spikes, neg_times = spike_utils.load_spike_data(sensor_path, ppt_num, sensor)
 
-    neg_cluster_indx = spike_utils.load_cluster_labels(ppt_num, sensor, sensor_path)
+    neg_cluster_labs = spike_utils.load_cluster_labels(ppt_num, sensor, sensor_path)
 
-    if neg_cluster_indx is None:
+    if neg_cluster_labs is None:
         continue
 
     # Sort the spikes into thier clusters
-    neg_clusters = sort_cluster_times(neg_cluster_indx, neg_times)
+    neg_clusters = spike_utils.sort_cluster_times(neg_cluster_labs, neg_times)
 
     # Continue if all spikes were unassigned
     if not neg_clusters:
         continue
+
+    behave_output = spike_utils.load_behave_data(ppt_num)
     
-    # Load Behavioural data
-    behave_data = loadmat(
-        f"./screeningData/20191202-041757-{ppt_num}-screeningData.mat",
-        struct_as_record=False,
-        squeeze_me=True
-    )
-    behave_output = behave_data["out"] # this is the data and timing
+    # Stimulus labels | shape: 50; stimulus names
+    stim = behave_output.stimulus 
 
-    # stimulus presentation times
-    pres_time = behave_output.presTime # shape: 50, 6, 2; stimulus x presentation x start-end
-
-    # stimulus labels
-    stim = behave_output.stimulus # shape: 50; stimulus names
+    # Presentation times | shape: 50, 6, 2; stim x presentation x start-end
+    pres_time = behave_output.presTime
 
     # Count the spikes that occured for each stimulus and the baseline 
-    stim_intervals = dict(zip(stim, pres_time))
+    stim_start_end = dict(zip(stim, pres_time))
     spikes_per_cluster = {key: None for key, _ in neg_clusters.items()}
 
     for cluster, spikes in neg_clusters.items():
-        spikes_per_cluster[cluster] = count_spikes.count_spikes(spikes, stim_intervals)
+        my_spikes = count_spikes.spikes_to_stimuli(spikes, stim_start_end)
+        spikes_per_cluster[cluster] = count_spikes.count_spikes(spikes, stim_start_end)
 
     # Create dataframe of the counted spikes
     rows = [
@@ -98,17 +60,13 @@ for sensor_path in sensor_paths:
     ]
 
     df = pd.DataFrame(rows)
-    df.insert(0, "sensor", sensor)
-    df.insert(0, "ppt", ppt_num)
-    
-    # Column concerning how many spikes there were for each of the six stim presentations
-    df["total_spikes"] = df["spike_times"].apply(lambda x: [len(i) for i in x])
-    df["total_spikes"] = df.apply(add_units_with_no_spikes, axis=1)
+    # df.insert(0, "sensor", sensor)
+    # df.insert(0, "ppt", ppt_num)
 
-    # Descriptive statistics
-    df["mean_spikes"] = df["total_spikes"].apply(np.mean)
-    df["median_spikes"] = df["total_spikes"].apply(np.median)
-    df["std_spikes"] = df["total_spikes"].apply(np.std)
+    # # Descriptive statistics
+    # df["mean_spikes"] = df["total_spikes"].apply(np.mean)
+    # df["median_spikes"] = df["total_spikes"].apply(np.median)
+    # df["std_spikes"] = df["total_spikes"].apply(np.std)
 
     all_dfs.append(df)
 
