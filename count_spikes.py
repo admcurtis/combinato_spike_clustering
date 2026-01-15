@@ -17,7 +17,7 @@ def spikes_to_stimuli(spike_times, stim_start_end, t_min=0.3):
     return stim_spikes
 
 
-def spikes_at_baseline(spike_times, stim_start_end, t_min=0.7):
+def spikes_at_baseline(spike_times, stim_start_end, t_min=0.3):
     """
     Returns a list a spikes that occured during the baseline.
     """
@@ -38,7 +38,8 @@ def spikes_at_baseline(spike_times, stim_start_end, t_min=0.7):
     return baseline_spikes
 
 
-def group_spikes_per_trial(spike_times, stim_duration=0.7) -> list[list]:
+# DEPRECATED: NOT IN USE.
+def group_spikes_per_trial(spike_times, stim_duration=1) -> list[list]:
     """
     Takes list of all spikes to a given stimulus across trials
     and returns list of lists with each sublist concerning a single trial
