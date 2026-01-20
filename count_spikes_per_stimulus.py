@@ -116,6 +116,38 @@ waveform_df = waveform_df.sort_values(by=["ppt", "sensor", "unit", "stimulus"])
 
 spike_count_df = pd.concat(spike_count_dfs, ignore_index=True)
 
+#%% Merge
+# Merge spikes onto stimulus presentations
+merged = spike_count_df.merge(
+    waveform_df,
+    on=['ppt', 'sensor', 'unit', 'stimulus'],
+    how='left'
+)
+
+# Keep only spikes that fall within the stimulus window
+in_window = merged[
+    (merged['spike_time'] >= merged['start']) &
+    (merged['spike_time'] <= merged['end'])
+]
+
+# Count spikes per stimulus presentation
+spike_counts = (
+    in_window
+    .groupby(spike_count_df.columns.tolist(), dropna=False)
+    .size()
+    .reset_index(name='n_spikes')
+)
+
+stim_df = spike_count_df.merge(
+    spike_counts,
+    on=spike_count_df.columns.tolist(),
+    how='left'
+)
+
+stim_df['n_spikes'] = stim_df['n_spikes'].fillna(0).astype(int)
+
+
+
 #%% Save
 waveform_df.to_csv("./spike_waveforms.csv", index=False)
 spike_count_df.to_csv("spike_counts.csv", index=False)
