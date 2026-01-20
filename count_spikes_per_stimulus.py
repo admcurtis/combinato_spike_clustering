@@ -147,7 +147,6 @@ stim_df = spike_count_df.merge(
 stim_df['n_spikes'] = stim_df['n_spikes'].fillna(0).astype(int)
 
 
-
 #%% Save
 waveform_df.to_csv("./spike_waveforms.csv", index=False)
 spike_count_df.to_csv("spike_counts.csv", index=False)
