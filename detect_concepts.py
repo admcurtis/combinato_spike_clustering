@@ -1,25 +1,48 @@
 #%% DEPENDENCIES
 import numpy as np
 import pandas as pd
+from scipy.stats import norm
 
-#%% FIND CONCEPT CELLS
+#%% Multiple comparisons function
+def sd_threshold(num_comparisons, fwer=0.05):
+    """
+    Calculate the number of SDs above the mean needed to control 
+    the family-wise error rate (FWER) for multiple comparisons.
+    """
+    alpha_per_comparison = fwer / num_comparisons
+    z_threshold = norm.ppf(1 - alpha_per_comparison)
+    return z_threshold
+
+#%% New
 spike_data = pd.read_csv("./spike_counts.csv")
 
-baselines = spike_data[spike_data["stimulus"] == "BASELINE"].copy()
-stims = spike_data[spike_data["stimulus"] != "BASELINE"].copy()
-
-baselines["sigma"] = baselines["mean_spikes"].copy() + (baselines["std_spikes"] * 1.96)
-
-sigmas = baselines[["ppt", "sensor", "unit", "sigma"]]
-stims = pd.merge(stims, sigmas)
-
-stims["concept_cell"] = np.where(
-    stims["median_spikes"] > stims["sigma"],
-    1,
-    0
-
+spike_stats = (
+    spike_data
+    .groupby(by=["ppt", "sensor", "unit", "stimulus"])["n_spikes"]
+    .agg(["mean", "std", "median"])
+    .reset_index()
 )
 
-concepts = stims[stims["concept_cell"] == 1]
+baselines = spike_stats[spike_stats["stimulus"] == "BASELINE"].copy()
+stimuli = spike_stats[spike_stats["stimulus"] != "BASELINE"].copy()
+
+z_threshold = sd_threshold(stimuli.shape[0])
+
+baselines["threshold"] = baselines["mean"] + (baselines["std"] * z_threshold)
+thresholds = baselines[["ppt", "sensor", "unit", "threshold"]]
+
+stimuli = pd.merge(stimuli, thresholds)
+
+stimuli["concept_cell"] = np.where(
+    stimuli["median"] > stimuli["threshold"],
+    1,
+    0
+)
+
+concepts = stimuli[
+    (stimuli["concept_cell"] == 1) &
+    (stimuli["median"] >= 2)
+]
 
 print(concepts)
+
