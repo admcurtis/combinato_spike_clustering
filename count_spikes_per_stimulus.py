@@ -6,6 +6,7 @@ import os
 os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE" # prevent errors loading H5 in WSL
 import spike_utils
 import count_spikes
+import tabularise
 
 #%% I/O PATHS
 data_path = "./processed_data/"
@@ -51,25 +52,8 @@ for sensor_path in sensor_paths:
         stimulus_spikes["BASELINE"] = baseline_spikes
         spikes_per_stimulus[cluster] = stimulus_spikes
 
-    # Create waveform df
-    rows = [
-        {"unit": unit, "stimulus": stim, "spike_times": spikes}
-        for unit, stim_dict in spikes_per_stimulus.items()
-        for stim, spikes in stim_dict.items()
-    ]
-
-    df = pd.DataFrame(rows)
-    df.insert(0, "sensor", sensor)
-    df.insert(0, "ppt", ppt_num)
-
-    df_long= (
-        df
-        .explode("spike_times")
-        .dropna(subset=["spike_times"])
-        .rename(columns={"spike_times": "spike_time"})
-    )
-
-    df_long["spike_time"] = pd.to_numeric(df_long["spike_time"], errors="coerce")
+    # Create tabular data
+    df_long = tabularise.create_waveform_df(spikes_per_stimulus, sensor, ppt_num)
 
     waveforms_df = pd.DataFrame(waveforms)
     waveforms_df.insert(0, "spike_time", spike_times)
@@ -130,24 +114,25 @@ in_window = merged[
     (merged['spike_time'] <= merged['end'])
 ]
 
+#%%
 # Count spikes per stimulus presentation
 spike_counts = (
     in_window
     .groupby(spike_count_df.columns.tolist(), dropna=False)
-    .size()
+    .size() # number of rows in each group, i.e., spike count
     .reset_index(name='n_spikes')
 )
 
+# Mereg spike counts into spike_count_df
 stim_df = spike_count_df.merge(
     spike_counts,
-    on=spike_count_df.columns.tolist(),
+        on=spike_count_df.columns.tolist(),
     how='left'
 )
 
 stim_df['n_spikes'] = stim_df['n_spikes'].fillna(0).astype(int)
 
-
 #%% Save
 waveform_df.to_csv("./spike_waveforms.csv", index=False)
-spike_count_df.to_csv("spike_counts.csv", index=False)
+stim_df.to_csv("spike_counts.csv", index=False)
 
