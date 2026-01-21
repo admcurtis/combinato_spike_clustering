@@ -25,6 +25,7 @@ for sensor_path in sensor_paths:
     waveforms, spike_times = spike_utils.load_spike_data(sensor_path, ppt_num, sensor)
     cluster_labels = spike_utils.load_cluster_labels(ppt_num, sensor, sensor_path)
 
+    # Continue if no cluster labels (sensor detected no spikes)
     if cluster_labels is None:
         continue
 
@@ -52,47 +53,33 @@ for sensor_path in sensor_paths:
         stimulus_spikes["BASELINE"] = baseline_spikes
         spikes_per_stimulus[cluster] = stimulus_spikes
 
-    # Create tabular data
-    df_long = tabularise.create_waveform_df(spikes_per_stimulus, sensor, ppt_num)
+    # Create tabular data for each spike detected
+    spike_time_df = tabularise.create_waveform_df(spikes_per_stimulus, sensor, ppt_num)
 
-    waveforms_df = pd.DataFrame(waveforms)
-    waveforms_df.insert(0, "spike_time", spike_times)
+    waveforms = pd.DataFrame(waveforms)
+    waveforms.insert(0, "spike_time", spike_times)
 
-    data_with_waveforms = pd.merge(df_long, waveforms_df, on="spike_time", how="outer")
-    data_with_waveforms = data_with_waveforms.dropna()
+    spike_times_with_waveforms = pd.merge(
+        spike_time_df,
+        waveforms,
+        on="spike_time",
+        how="outer"
+    )
 
-    waveform_dfs.append(data_with_waveforms)
+    spike_times_with_waveforms = spike_times_with_waveforms.dropna()
 
-    # Create spike count df
-    rows = []
-    for stim, intervals in stim_start_end.items():
-        for i, (start, end) in enumerate(intervals):
-            rows.append(
-                 {'stimulus': stim, 'trial_num': i+1, 'start': start, 'end': end}
-            )
+    waveform_dfs.append(spike_times_with_waveforms)
 
-    temp = []
-    for unit in np.unique(cluster_labels):
-        df = pd.DataFrame(rows)
-        df.insert(0, "unit", unit)
-        df.insert(0, "sensor", sensor)
-        df.insert(0, "ppt", ppt_num)
-        temp.append(df)
-
-        df = pd.DataFrame(rows)
-        df.insert(0, "unit", unit)
-        df.insert(0, "sensor", sensor)
-        df.insert(0, "ppt", ppt_num)
-        df = df.assign(stimulus="BASELINE")
-        df["end"] = df["start"]
-        df["start"] = df["start"] - 0.3
-        df = df.sort_values(by=["start"])
-        df["trial_num"] = list(range(1, 301))
-        temp.append(df)
-
-    df = pd.concat(temp, ignore_index=True)
+    # Create tabular data for each event (spike count to each event added below)
+    events_df = tabularise.create_event_df(
+        stim_start_end,
+        cluster_labels,
+        sensor,
+        ppt_num,
+        tmin=0.3
+    )
     
-    spike_count_dfs.append(df)
+    spike_count_dfs.append(events_df)
         
 
 waveform_df = pd.concat(waveform_dfs, ignore_index=True)

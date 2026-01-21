@@ -1,5 +1,6 @@
 #%% Dependencies
 import pandas as pd 
+import numpy as np
 
 #%%
 def create_waveform_df(spikes_per_stimulus, sensor, ppt_num):
@@ -26,6 +27,34 @@ def create_waveform_df(spikes_per_stimulus, sensor, ppt_num):
     return df_long
 
 
+def create_event_df(stim_start_end, cluster_labels, sensor, ppt_num, tmin=0.3):
 
+    rows = []
+    for stim, intervals in stim_start_end.items():
+        for i, (start, end) in enumerate(intervals):
+            rows.append(
+                 {'stimulus': stim, 'trial_num': i+1, 'start': start, 'end': end}
+            )
 
-    
+    temp = []
+    for unit in np.unique(cluster_labels):
+        # rows for stimului
+        df = pd.DataFrame(rows)
+        df.insert(0, "unit", unit)
+        df.insert(0, "sensor", sensor)
+        df.insert(0, "ppt", ppt_num)
+        temp.append(df)
+
+        # rows for baseline
+        df = pd.DataFrame(rows)
+        df.insert(0, "unit", unit)
+        df.insert(0, "sensor", sensor)
+        df.insert(0, "ppt", ppt_num)
+        df = df.assign(stimulus="BASELINE")
+        df["end"] = df["start"]
+        df["start"] = df["start"] - tmin
+        df = df.sort_values(by=["start"])
+        df["trial_num"] = list(range(1, 301))
+        temp.append(df)
+
+    return pd.concat(temp, ignore_index=True)
