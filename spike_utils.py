@@ -38,7 +38,7 @@ def load_spike_data(sensor_path, ppt_num, sensor):
     return neg_spikes, neg_times
 
 
-def load_cluster_labels(ppt_num, sensor, sensor_path):
+def load_cluster_labels(sensor_path):
     """
     Loads the labels of the clusters. Returns an array of indices with which to filter
     the spike data.
@@ -51,7 +51,6 @@ def load_cluster_labels(ppt_num, sensor, sensor_path):
             neg_cluster_idx = np.array(neg_sort_data["classes"])
             return neg_cluster_idx
     except FileNotFoundError:
-        print(f"No units detected for ppt{ppt_num} sensor{sensor}")
         return None
 
 
