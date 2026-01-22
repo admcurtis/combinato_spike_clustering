@@ -29,9 +29,13 @@ stimuli = spike_stats[spike_stats["stimulus"] != "BASELINE"].copy()
 z_threshold = sd_threshold(stimuli.shape[0])
 
 baselines["threshold"] = baselines["mean"] + (baselines["std"] * z_threshold)
-thresholds = baselines[["ppt", "sensor", "unit", "threshold"]]
 
-stimuli = pd.merge(stimuli, thresholds)
+stimuli = pd.merge(
+    stimuli,
+    baselines[["ppt", "sensor", "unit", "mean", "std", "threshold"]],
+    on=["ppt", "sensor", "unit"],
+    suffixes=("", "_baseline")
+    )
 
 stimuli["concept_cell"] = np.where(
     stimuli["median"] > stimuli["threshold"],
@@ -46,3 +50,5 @@ concepts = stimuli[
 
 print(concepts)
 
+#%% Save
+concepts.to_csv("./detected_concepts.csv", index=False)

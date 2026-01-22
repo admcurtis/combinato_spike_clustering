@@ -48,9 +48,13 @@ for sensor_path in sensor_paths:
 
     for cluster, spikes in spikes_per_cluster.items():
 
-        stimulus_spikes = extract_spikes.spikes_to_stimuli(spikes, stim_start_end)
+        stimulus_spikes = extract_spikes.spikes_to_stimuli(
+            spikes, stim_start_end, t_min=0
+        )
 
-        baseline_spikes = extract_spikes.spikes_at_baseline(spikes, stim_start_end)
+        baseline_spikes = extract_spikes.spikes_at_baseline(
+            spikes, stim_start_end
+        )
 
         stimulus_spikes["BASELINE"] = baseline_spikes
         spikes_per_stimulus[cluster] = stimulus_spikes
