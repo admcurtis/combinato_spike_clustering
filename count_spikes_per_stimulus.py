@@ -16,6 +16,7 @@ sensor_paths = [os.path.normpath(path) for path in sensor_paths]
 
 #sensor_paths = [sensor_paths[0]]
 
+
 #%% MAIN SCRIPT
 waveform_dfs = []
 events_dfs = []
@@ -92,6 +93,13 @@ events_df = pd.concat(events_dfs, ignore_index=True)
 spike_count_df = tabularise.add_spike_counts(events_df, waveform_df)
 
 #%% Save
+if sum(spike_count_df["n_spikes"]) != waveform_df.shape[0]:
+
+    print(f"Error: sum(n_spikes)={sum(spike_count_df['n_spikes'])}, "
+          f"waveform_df rows={waveform_df.shape[0]}")
+    
+    raise ValueError("Spike counts do not match waveform rows!")
+
 waveform_df.to_csv("./spike_waveforms.csv", index=False)
 spike_count_df.to_csv("spike_counts.csv", index=False)
 

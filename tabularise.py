@@ -27,13 +27,13 @@ def create_waveform_df(spikes_per_stimulus, sensor, ppt_num):
     return df_long
 
 
-def create_event_df(stim_start_end, cluster_labels, sensor, ppt_num, tmin=0.3):
+def create_event_df(stim_start_end, cluster_labels, sensor, ppt_num, tmin=0.0):
 
     rows = []
     for stim, intervals in stim_start_end.items():
         for i, (start, end) in enumerate(intervals):
             rows.append(
-                 {'stimulus': stim, 'trial_num': i+1, 'start': start, 'end': end}
+                 {'stimulus': stim, 'exemplar_num': i+1, 'start': start, 'end': end}
             )
 
     temp = []
@@ -43,6 +43,9 @@ def create_event_df(stim_start_end, cluster_labels, sensor, ppt_num, tmin=0.3):
         df.insert(0, "unit", unit)
         df.insert(0, "sensor", sensor)
         df.insert(0, "ppt", ppt_num)
+        df = df.sort_values(by=["start"])
+        df.insert(4, "trial_num", list(range(1, df.shape[0]+1)))
+        df = df.sort_values(by=["ppt", "sensor", "unit", "stimulus"])
         temp.append(df)
 
         # rows for baseline
@@ -51,10 +54,11 @@ def create_event_df(stim_start_end, cluster_labels, sensor, ppt_num, tmin=0.3):
         df.insert(0, "sensor", sensor)
         df.insert(0, "ppt", ppt_num)
         df = df.assign(stimulus="BASELINE")
-        df["end"] = df["start"]
-        df["start"] = df["start"] - tmin
         df = df.sort_values(by=["start"])
-        df["trial_num"] = list(range(1, 301))
+        df.insert(4, "trial_num", list(range(1, df.shape[0]+1)))
+        df["end"] = df["start"]
+        df["start"] = df["start"].shift(1).fillna(0)
+        df = df.sort_values(by=["ppt", "sensor", "unit", "stimulus"])
         temp.append(df)
 
     return pd.concat(temp, ignore_index=True)

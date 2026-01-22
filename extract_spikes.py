@@ -1,6 +1,6 @@
 import numpy as np
 
-def spikes_to_stimuli(spike_times, stim_start_end, t_min=0.3):
+def spikes_to_stimuli(spike_times, stim_start_end, t_min=0.0):
     """
     Returns a dictionary with each stimulus as a key and a list of spikes times to that
     stimulus. The list is collapsed across trials.
@@ -29,9 +29,15 @@ def spikes_at_baseline(spike_times, stim_start_end, t_min=0.3):
         for trial in stimulus
     ])
 
+    # Add a lagged column to get previous stim offset and next onset in same row
+    all_trial_times = all_trial_times[np.argsort(all_trial_times[:, 0])]
+    lagged_col = np.zeros(all_trial_times.shape[0])
+    lagged_col[1:] = all_trial_times[:-1, 1]
+    all_trial_times = np.column_stack((all_trial_times, lagged_col))
+
     baseline_spikes = spike_times[np.any(
-            (spike_times[:, None] <= all_trial_times[:, 0]) &
-            (spike_times[:, None] >= all_trial_times[:, 0] - t_min),
+            (spike_times[:, None] < all_trial_times[:, 0]) &
+            (spike_times[:, None] > all_trial_times[:, 2] - t_min),
             axis=1
         )]
     
