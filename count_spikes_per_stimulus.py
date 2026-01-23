@@ -85,14 +85,26 @@ for sensor_path in sensor_paths:
     )
     
     events_dfs.append(events_df)
+
         
 waveform_df = pd.concat(waveform_dfs, ignore_index=True)
 waveform_df = waveform_df.sort_values(by=["ppt", "sensor", "unit", "stimulus"])
 
 events_df = pd.concat(events_dfs, ignore_index=True)
-spike_count_df = tabularise.add_spike_counts(events_df, waveform_df)
 
-#%% Save
+# Count spikes for each particiapnt individually
+spike_count_dfs = []
+for ppt in np.unique(waveform_df["ppt"]):
+    temp_waveform = waveform_df[waveform_df["ppt"] == ppt]
+    temp_events = events_df[events_df["ppt"] == ppt]
+
+    spike_count_df = tabularise.add_spike_counts(temp_events, temp_waveform)
+
+    spike_count_dfs.append(spike_count_df)
+
+spike_count_df = pd.concat(spike_count_dfs, ignore_index=True)
+
+#%% Sanity check
 if sum(spike_count_df["n_spikes"]) != waveform_df.shape[0]:
 
     print(f"Error: sum(n_spikes)={sum(spike_count_df['n_spikes'])}, "
@@ -100,6 +112,7 @@ if sum(spike_count_df["n_spikes"]) != waveform_df.shape[0]:
     
     raise ValueError("Spike counts do not match waveform rows!")
 
+#%% Save
 waveform_df.to_csv("./spike_waveforms.csv", index=False)
 spike_count_df.to_csv("spike_counts.csv", index=False)
 
