@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 from scipy.stats import norm
 
+
 #%% Multiple comparisons function
 def sd_threshold(num_comparisons, fwer=0.05):
     """

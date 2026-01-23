@@ -54,7 +54,7 @@ for sensor_path in sensor_paths:
         )
 
         baseline_spikes = extract_spikes.spikes_at_baseline(
-            spikes, stim_start_end
+            spikes, stim_start_end, t_min=0
         )
 
         stimulus_spikes["BASELINE"] = baseline_spikes
@@ -100,6 +100,7 @@ if sum(spike_count_df["n_spikes"]) != waveform_df.shape[0]:
     
     raise ValueError("Spike counts do not match waveform rows!")
 
+#%%
 waveform_df.to_csv("./spike_waveforms.csv", index=False)
 spike_count_df.to_csv("spike_counts.csv", index=False)
 

@@ -66,6 +66,47 @@ def create_event_df(stim_start_end, cluster_labels, sensor, ppt_num, tmin=0.0):
 
 def add_spike_counts(events_df, waveform_df):
 
+    groups = ['ppt', 'sensor', 'unit', 'stimulus']
+    spike_counts = events_df.copy()
+    spike_counts['n_spikes'] = 0
+
+    for keys, events_grp in events_df.groupby(groups):
+
+        spikes = waveform_df.loc[
+            (waveform_df['ppt'] == keys[0]) &
+            (waveform_df['sensor'] == keys[1]) &
+            (waveform_df['unit'] == keys[2]) &
+            (waveform_df['stimulus'] == keys[3]),
+            'spike_time'
+        ].to_numpy()
+
+        if spikes.size == 0:
+            continue
+
+        starts = events_grp['start'].to_numpy()
+        ends = events_grp['end'].to_numpy()
+
+        if events_grp["stimulus"].iloc[0] == "BASELINE":
+            counts = (
+                (spikes[:, None] >= ends - 0.3) &
+                (spikes[:, None] < ends)
+            ).sum(axis=0)
+        else:
+            counts = (
+                (spikes[:, None] >= starts + 0.3) &
+                (spikes[:, None] <= ends)
+            ).sum(axis=0)
+
+        spike_counts.loc[events_grp.index, 'n_spikes'] = counts
+
+    return spike_counts
+
+
+
+
+# NOTE: this is fast but the intial merge requires a tonne of memory for big datasets.
+def add_spike_counts2(events_df, waveform_df):
+
     # Merge spikes onto stimulus presentations
     merged = events_df.merge(
         waveform_df,
