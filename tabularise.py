@@ -63,37 +63,3 @@ def create_event_df(stim_start_end, cluster_labels, sensor, ppt_num, tmin=0.0):
 
     return pd.concat(temp, ignore_index=True)
 
-# NOTE: merged can grow exponentially with large datasets, apply to each ppt individually
-def add_spike_counts(events_df, waveform_df):
-
-    # Merge spikes onto stimulus presentations
-    merged = events_df.merge(
-        waveform_df,
-        on=['ppt', 'sensor', 'unit', 'stimulus'],
-        how='left'
-    )
-
-    # Keep only spikes that fall within the stimulus window
-    in_window = merged[
-        (merged['spike_time'] >= merged['start']) &
-        (merged['spike_time'] <= merged['end'])
-    ]
-
-    # Count spikes per stimulus presentation
-    spike_counts = (
-        in_window
-        .groupby(events_df.columns.tolist(), dropna=False)
-        .size() # number of rows in each group, i.e., spike count
-        .reset_index(name='n_spikes')
-    )
-
-    # Merge spike counts into events_df
-    spike_count_df = events_df.merge(
-        spike_counts,
-        on=events_df.columns.tolist(),
-        how='left'
-    )
-
-    spike_count_df['n_spikes'] = spike_count_df['n_spikes'].fillna(0).astype(int)
-
-    return spike_count_df

@@ -16,7 +16,6 @@ sensor_paths = glob(f"{data_path}*/ppt*/", recursive = True)
 sensor_paths = [os.path.normpath(path) for path in sensor_paths]
 #sensor_paths = [sensor_paths[0]]
 
-
 #%% MAIN SCRIPT
 waveform_dfs = []
 events_dfs = []
@@ -88,7 +87,6 @@ for sensor_path in sensor_paths:
         
 waveform_df = pd.concat(waveform_dfs, ignore_index=True)
 waveform_df = waveform_df.sort_values(by=["ppt", "sensor", "unit", "stimulus"])
-
 events_df = pd.concat(events_dfs, ignore_index=True)
 
 
