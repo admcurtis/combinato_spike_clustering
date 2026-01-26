@@ -17,9 +17,9 @@ def add_spike_counts(events_df, waveform_df, s_min=0, b_min=0):
     """
 
     stim_events = events_df[events_df["stimulus"] != "BASELINE"]
-    bl_events = events_df[events_df["stimulus"] == "BASELINE"]
-
     stim_waveforms = waveform_df[waveform_df["stimulus"] != "BASELINE"]
+
+    bl_events = events_df[events_df["stimulus"] == "BASELINE"]
     bl_waveforms = waveform_df[waveform_df["stimulus"] == "BASELINE"]
 
     # Merge spikes onto stimulus presentations
@@ -71,7 +71,6 @@ def add_spike_counts(events_df, waveform_df, s_min=0, b_min=0):
 
 
 #%% Script
-# Count spikes for each particiapnt individually
 spike_counts_list = []
 for ppt in np.unique(waveform_data["ppt"]):
     temp_waveform = waveform_data[waveform_data["ppt"] == ppt]
@@ -92,6 +91,7 @@ if sum(spike_counts["n_spikes"]) != waveform_data.shape[0]:
           f"waveform_df rows={waveform_data.shape[0]}")
     
     raise ValueError("Spike counts do not match waveform rows!")
+
 
 #%% Save spike counts
 spike_counts.to_csv("counted_spikes.csv", index=False)

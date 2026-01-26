@@ -14,7 +14,7 @@ def sd_threshold(num_comparisons, fwer=0.05):
     return z_threshold
 
 
-#%% New
+#%% Script
 spike_data = pd.read_csv("./counted_spikes.csv")
 
 spike_stats = (
