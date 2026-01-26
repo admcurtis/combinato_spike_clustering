@@ -113,6 +113,6 @@ if sum(spike_count_df["n_spikes"]) != waveform_df.shape[0]:
     raise ValueError("Spike counts do not match waveform rows!")
 
 #%% Save
-waveform_df.to_csv("./spike_waveforms.csv", index=False)
-spike_count_df.to_csv("spike_counts.csv", index=False)
+waveform_df.to_csv("./all_spike_waveforms.csv", index=False)
+spike_count_df.to_csv("all_spike_counts.csv", index=False)
 
