@@ -13,8 +13,9 @@ def sd_threshold(num_comparisons, fwer=0.05):
     z_threshold = norm.ppf(1 - alpha_per_comparison)
     return z_threshold
 
+
 #%% New
-spike_data = pd.read_csv("./spike_counts.csv")
+spike_data = pd.read_csv("./counted_spikes.csv")
 
 spike_stats = (
     spike_data
