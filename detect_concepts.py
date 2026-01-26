@@ -15,7 +15,7 @@ def sd_threshold(num_comparisons, fwer=0.05):
 
 
 #%% Script
-spike_data = pd.read_csv("./counted_spikes.csv")
+spike_data = pd.read_csv("./spike_counts.csv")
 
 spike_stats = (
     spike_data

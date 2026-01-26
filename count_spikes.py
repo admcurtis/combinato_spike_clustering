@@ -94,4 +94,4 @@ if sum(spike_counts["n_spikes"]) != waveform_data.shape[0]:
 
 
 #%% Save spike counts
-spike_counts.to_csv("counted_spikes.csv", index=False)
+spike_counts.to_csv("spike_counts.csv", index=False)
