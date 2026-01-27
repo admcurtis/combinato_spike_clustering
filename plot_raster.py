@@ -26,8 +26,11 @@ concept_intervals = event_times.merge(
     how="inner"
 )
 
-#%%
+baselines = spike_data[spike_data["stimulus"] == "BASELINE"]
+
+#%% Get list of spike times for each concept trial
 spikes_list = []
+bl_spike_list = []
 for row in concept_intervals.itertuples(index=False):
 
     print(row.ppt, row.sensor, row.unit, row.stimulus)
@@ -39,9 +42,20 @@ for row in concept_intervals.itertuples(index=False):
         (concept_spikes["stimulus"] == row.stimulus)
     ]
 
+    bl_spikes = baselines[
+        (baselines["ppt"] == row.ppt) &
+        (baselines["sensor"] == row.sensor) &
+        (baselines["unit"] == row.unit)
+    ]
+
     spikes = spikes["spike_time"][
-        (spikes["spike_time"] >= row.start + 0.3) &
+        (spikes["spike_time"] >= row.start) &
         (spikes["spike_time"] <= row.end)
+    ]
+
+    bl_spikes = bl_spikes["spike_time"][
+        (bl_spikes["spike_time"] >= row.start - 0.3) &
+        (bl_spikes["spike_time"] <= row.end + 0.3)
     ]
 
     if spikes.empty:
@@ -49,16 +63,18 @@ for row in concept_intervals.itertuples(index=False):
     else:
         spikes = list(spikes)
 
+    if bl_spikes.empty:
+        bl_spikes = []
+    else:
+        bl_spikes = list(bl_spikes)
+
     spikes_list.append(spikes)
+    bl_spike_list.append(bl_spikes)
 
 concept_intervals["spikes"] = spikes_list
+concept_intervals["bl_spikes"] = bl_spike_list
 
-
-#%% Get baseline spikes
-
-# for filtering
-x = full_data[["ppt", "sensor", "unit", "stimulus", "start", "end"]].drop_duplicates()
-
+#%%
 
 #%% NOTE
 # Then you can filter waveforms to get the spikes that are +- around the stimulus of 
