@@ -16,6 +16,8 @@ concept_spikes = spike_data.merge(
     how="inner"
 )
 
+concept_spikes["unit"] = concept_spikes["unit"].astype(int)
+
 concept_spikes = concept_spikes[["ppt", "sensor", "unit", "stimulus", "spike_time"]]
 
 concept_intervals = event_times.merge(
@@ -24,19 +26,33 @@ concept_intervals = event_times.merge(
     how="inner"
 )
 
-full_data = concept_spikes.merge(
-    concept_intervals,
-    on=["ppt", "sensor", "unit", "stimulus"],
-    how="inner"
-)
+#%%
+spikes_list = []
+for row in concept_intervals.itertuples(index=False):
 
-# NOTE: the n_spikes column may differ from the number of rows. This is expected.
-# n_spikes only inlcudes trials +0.3ms after stim onset. 
-# Plotting requires all spikes. 
-full_data = full_data[
-    (full_data["spike_time"] >= full_data["start"]) &
-    (full_data["spike_time"] <= full_data["end"])
-]
+    print(row.ppt, row.sensor, row.unit, row.stimulus)
+
+    spikes = concept_spikes[
+        (concept_spikes["ppt"] == row.ppt) &
+        (concept_spikes["sensor"] == row.sensor) &
+        (concept_spikes["unit"] == row.unit) &
+        (concept_spikes["stimulus"] == row.stimulus)
+    ]
+
+    spikes = spikes["spike_time"][
+        (spikes["spike_time"] >= row.start + 0.3) &
+        (spikes["spike_time"] <= row.end)
+    ]
+
+    if spikes.empty:
+        spikes = []
+    else:
+        spikes = list(spikes)
+
+    spikes_list.append(spikes)
+
+concept_intervals["spikes"] = spikes_list
+
 
 #%% Get baseline spikes
 
