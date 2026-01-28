@@ -8,49 +8,53 @@ concept_cells = pd.read_csv("./detected_concepts.csv")
 spike_data = pd.read_csv("./all_spike_waveforms.csv")
 event_times = pd.read_csv("./spike_counts.csv")
 
-#%%
 
+#%% Process data
+# Get a dataframe of spikes to each concept cell
 concept_spikes = spike_data.merge(
     concept_cells,
     on=["ppt", "sensor", "unit", "stimulus"],
     how="inner"
 )
-
 concept_spikes["unit"] = concept_spikes["unit"].astype(int)
 
 concept_spikes = concept_spikes[["ppt", "sensor", "unit", "stimulus", "spike_time"]]
 
+# Get dataframe of spikes at baseline
+baseline_spikes = spike_data[spike_data["stimulus"] == "BASELINE"]
+
+# Get a dataframe of trial times for each concept cell.
 concept_intervals = event_times.merge(
     concept_spikes[["ppt", "sensor", "unit", "stimulus"]].drop_duplicates(),
     on=["ppt", "sensor", "unit", "stimulus"],
     how="inner"
 )
 
-baselines = spike_data[spike_data["stimulus"] == "BASELINE"]
 
 #%% Get list of spike times for each concept trial
 spikes_list = []
 bl_spike_list = []
+
 for row in concept_intervals.itertuples(index=False):
 
     print(row.ppt, row.sensor, row.unit, row.stimulus)
 
-    spikes = concept_spikes[
+    stim_spikes = concept_spikes[
         (concept_spikes["ppt"] == row.ppt) &
         (concept_spikes["sensor"] == row.sensor) &
         (concept_spikes["unit"] == row.unit) &
         (concept_spikes["stimulus"] == row.stimulus)
     ]
 
-    bl_spikes = baselines[
-        (baselines["ppt"] == row.ppt) &
-        (baselines["sensor"] == row.sensor) &
-        (baselines["unit"] == row.unit)
+    stim_spikes = stim_spikes["spike_time"][
+        (stim_spikes["spike_time"] >= row.start) &
+        (stim_spikes["spike_time"] <= row.end)
     ]
 
-    spikes = spikes["spike_time"][
-        (spikes["spike_time"] >= row.start) &
-        (spikes["spike_time"] <= row.end)
+    bl_spikes = baseline_spikes[
+        (baseline_spikes["ppt"] == row.ppt) &
+        (baseline_spikes["sensor"] == row.sensor) &
+        (baseline_spikes["unit"] == row.unit) 
     ]
 
     bl_spikes = bl_spikes["spike_time"][
@@ -58,43 +62,32 @@ for row in concept_intervals.itertuples(index=False):
         (bl_spikes["spike_time"] <= row.end + 0.3)
     ]
 
-    if spikes.empty:
-        spikes = []
-    else:
-        spikes = list(spikes)
+    stim_spikes = [] if stim_spikes.empty else list(stim_spikes)
+    bl_spikes = [] if bl_spikes.empty else list(bl_spikes)
 
-    if bl_spikes.empty:
-        bl_spikes = []
-    else:
-        bl_spikes = list(bl_spikes)
-
-    spikes_list.append(spikes)
+    spikes_list.append(stim_spikes)
     bl_spike_list.append(bl_spikes)
 
-concept_intervals["spikes"] = spikes_list
-concept_intervals["bl_spikes"] = bl_spike_list
 
-#%%
-
-#%% NOTE
-# Then you can filter waveforms to get the spikes that are +- around the stimulus of 
-# interest for each trial.
-
-# The data need to be in following format
-spike_times = [
-    np.array([0.12, 0.45, 0.78]),     # trial 1
-    np.array([0.05, 0.33]),           # trial 2
-    np.array([0.22, 0.61, 0.89]),     # trial 3
-    np.array([0.10, 0.40, 0.70]),     # trial 4
-    np.array([0.15, 0.55]),           # trial 5
-    np.array([0.30, 0.80])            # trial 6
+# Place spikes during stimulus and spikes at baseline into a single list
+concept_intervals["all_spikes"] = [
+    stim_spike + bl_spike for stim_spike, bl_spike in zip(spikes_list, bl_spike_list)
 ]
 
+# Normalise spike times so they are relative to the stimulus onset
+concept_intervals["rel_spikes"] = concept_intervals.apply(
+    lambda row: np.array(row["all_spikes"]) - row["start"],
+    axis=1
+)
+
+
 #%% Plotting
+cell_to_plot = concept_intervals[concept_intervals["stimulus"] == "Danny Dyer"]
+cell_to_plot = [sorted(np.array(i)) for i in cell_to_plot["rel_spikes"]]
 
 plt.figure(figsize=(6, 4))
 
-for trial_idx, trial_spikes in enumerate(spike_times):
+for trial_idx, trial_spikes in enumerate(cell_to_plot):
     plt.vlines(
         trial_spikes,
         trial_idx + 0.5,
@@ -103,7 +96,9 @@ for trial_idx, trial_spikes in enumerate(spike_times):
 
 plt.xlabel("Time (s)")
 plt.ylabel("Trial")
-plt.yticks(range(1, len(spike_times) + 1))
+plt.yticks(range(1, len(cell_to_plot) + 1))
 plt.title("Raster plot")
+plt.axvline(0, color="red")
+plt.axvline(1, color="red")
 
 plt.show()
