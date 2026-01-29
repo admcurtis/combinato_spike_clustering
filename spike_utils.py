@@ -65,7 +65,7 @@ def sort_spikes_by_cluster(cluster_labs, spike_times) -> dict[str, np.ndarray[fl
 
     return  {
         cluster: spike_times[cluster_labs == cluster]
-        for cluster in range(1, len(np.unique(cluster_labs))) 
+        for cluster in range(1, len(np.unique(cluster_labs))+1) 
     }
 
 

@@ -17,7 +17,7 @@ def spikes_to_stimuli(spike_times, stim_start_end, t_min=0.0):
     return stim_spikes
 
 
-def spikes_at_baseline(spike_times, stim_start_end, t_min=0.3):
+def spikes_at_baseline(spike_times, stim_start_end, t_min=0.0):
     """
     Returns a list a spikes that occured during the baseline.
     """
@@ -36,8 +36,8 @@ def spikes_at_baseline(spike_times, stim_start_end, t_min=0.3):
     all_trial_times = np.column_stack((all_trial_times, lagged_col))
 
     baseline_spikes = spike_times[np.any(
-            (spike_times[:, None] < all_trial_times[:, 0]) &
-            (spike_times[:, None] > all_trial_times[:, 2] - t_min),
+            (spike_times[:, None] <= all_trial_times[:, 0]) &
+            (spike_times[:, None] >= all_trial_times[:, 2] - t_min),
             axis=1
         )]
     
