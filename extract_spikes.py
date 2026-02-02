@@ -1,13 +1,13 @@
 import numpy as np
 
-def spikes_to_stimuli(spike_times, stim_start_end, t_min=0.0):
+def spikes_to_stimuli(spike_times, stim_start_end):
     """
     Returns a dictionary with each stimulus as a key and a list of spikes times to that
     stimulus. The list is collapsed across trials.
     """
     stim_spikes = {
         stim: spike_times[np.any(
-            (spike_times[:, None] >= (start_end[:, 0] + t_min)) & 
+            (spike_times[:, None] >= (start_end[:, 0])) & 
             (spike_times[:, None] <= (start_end[:, 1])),
             axis=1
         )]
@@ -17,7 +17,7 @@ def spikes_to_stimuli(spike_times, stim_start_end, t_min=0.0):
     return stim_spikes
 
 
-def spikes_at_baseline(spike_times, stim_start_end, t_min=0.0):
+def spikes_at_baseline(spike_times, stim_start_end):
     """
     Returns a list a spikes that occured during the baseline.
     """
@@ -37,7 +37,7 @@ def spikes_at_baseline(spike_times, stim_start_end, t_min=0.0):
 
     baseline_spikes = spike_times[np.any(
             (spike_times[:, None] <= all_trial_times[:, 0]) &
-            (spike_times[:, None] >= all_trial_times[:, 2] - t_min),
+            (spike_times[:, None] >= all_trial_times[:, 2]),
             axis=1
         )]
     
