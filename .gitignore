@@ -12,3 +12,7 @@ processed_data_no_artefact_rejection/
 z_bin/
 spike_waveforms.csv
 ScreeningStimuli/
+
+# Data
+*.csv
+*.pkl

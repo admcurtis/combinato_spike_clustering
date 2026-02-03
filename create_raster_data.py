@@ -1,5 +1,4 @@
 #%% Dependencies
-import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 
@@ -78,27 +77,6 @@ concept_intervals["rel_spikes"] = concept_intervals.apply(
     axis=1
 )
 
+#%% Save
+concept_intervals.to_pickle("raster_data.pkl")
 
-#%% Plotting
-stim = "Danny Dyer"
-
-cell_to_plot = concept_intervals[concept_intervals["stimulus"] == stim]
-cell_to_plot = [sorted(np.array(i)) for i in cell_to_plot["rel_spikes"]]
-
-plt.figure(figsize=(6, 4))
-
-for trial_idx, trial_spikes in enumerate(cell_to_plot):
-    plt.vlines(
-        trial_spikes,
-        trial_idx + 0.5,
-        trial_idx + 1.5
-    )
-
-plt.xlabel("Time (s)")
-plt.ylabel("Trial")
-plt.yticks(range(1, len(cell_to_plot) + 1))
-plt.title("Raster plot")
-plt.axvline(0, color="red")
-plt.axvline(1, color="red")
-
-plt.show()
