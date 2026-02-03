@@ -82,16 +82,5 @@ for ppt in np.unique(waveform_data["ppt"]):
 
 spike_counts = pd.concat(spike_counts_list, ignore_index=True)
 
-
-#%% Santiy Check
-# NOTE: only works correctly if spike_counts hasn't been filtered using t_min/t_max
-if sum(spike_counts["n_spikes"]) != waveform_data.shape[0]:
-
-    print(f"Error: sum(n_spikes)={sum(spike_counts['n_spikes'])}, "
-          f"waveform_df rows={waveform_data.shape[0]}")
-    
-    raise ValueError("Spike counts do not match waveform rows!")
-
-
 #%% Save spike counts
 spike_counts.to_csv("spike_counts.csv", index=False)

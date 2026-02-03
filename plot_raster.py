@@ -82,7 +82,9 @@ concept_intervals["rel_spikes"] = concept_intervals.apply(
 
 
 #%% Plotting
-cell_to_plot = concept_intervals[concept_intervals["stimulus"] == "Danny Dyer"]
+stim = "Danny Dyer"
+
+cell_to_plot = concept_intervals[concept_intervals["stimulus"] == stim]
 cell_to_plot = [sorted(np.array(i)) for i in cell_to_plot["rel_spikes"]]
 
 plt.figure(figsize=(6, 4))

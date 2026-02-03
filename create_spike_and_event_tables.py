@@ -3,7 +3,6 @@ import os
 os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE" # prevent errors loading H5 in WSL
 
 import pandas as pd
-import numpy as np
 from glob import glob
 import spike_utils
 import extract_spikes
