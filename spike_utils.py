@@ -12,7 +12,7 @@ def get_ppt_sensor_nums(sensor_path):
     """
     ppt_num = sensor_path.split(os.sep)[-2][3:]
     sensor = sensor_path.split(os.sep)[-1][13:]
-    print(ppt_num, sensor)
+    print(f"Sorting ppt{ppt_num} sensor{sensor}")
     return ppt_num, sensor
 
 

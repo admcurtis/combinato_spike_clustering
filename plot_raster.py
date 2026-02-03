@@ -37,8 +37,6 @@ bl_spike_list = []
 
 for row in concept_intervals.itertuples(index=False):
 
-    print(row.ppt, row.sensor, row.unit, row.stimulus)
-
     stim_spikes = concept_spikes[
         (concept_spikes["ppt"] == row.ppt) &
         (concept_spikes["sensor"] == row.sensor) &

@@ -73,6 +73,9 @@ def add_spike_counts(events_df, waveform_df, s_min=0, b_min=0):
 #%% Script
 spike_counts_list = []
 for ppt in np.unique(waveform_data["ppt"]):
+    
+    print(f"Counting spikes for ppt{ppt}")
+
     temp_waveform = waveform_data[waveform_data["ppt"] == ppt]
     temp_events = event_data[event_data["ppt"] == ppt]
 
