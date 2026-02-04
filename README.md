@@ -1,4 +1,4 @@
-# Spike clustering using Combinato
+# Concept Cell Pipeline
 
 The scripts found here convert `.ns6` files—containing time series for each channel per participant—into separate `.mat` files.  
 Each `.mat` file contains the data for a single channel.
