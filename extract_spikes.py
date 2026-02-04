@@ -42,17 +42,3 @@ def spikes_at_baseline(spike_times, stim_start_end):
         )]
     
     return baseline_spikes
-
-
-# DEPRECATED: NOT IN USE.
-def group_spikes_per_trial(spike_times, stim_duration=1) -> list[list]:
-    """
-    Takes list of all spikes to a given stimulus across trials
-    and returns list of lists with each sublist concerning a single trial
-    """
-    if len(spike_times) == 0:
-        return []
-    diffs = np.diff(spike_times)
-    split_indices = np.where(diffs > stim_duration)[0] + 1
-    split_stims = np.split(spike_times, split_indices)
-    return [stim.tolist() for stim in split_stims]

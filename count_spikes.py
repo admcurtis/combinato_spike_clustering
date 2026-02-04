@@ -2,12 +2,7 @@
 import pandas as pd
 import numpy as np
 
-#%% Load data
-waveform_data = pd.read_csv("./all_spike_waveforms.csv")
-event_data = pd.read_csv("./all_events.csv")
-
-
-#%% Function
+#%% Functions
 # NOTE: merged can grow exponentially with large datasets, apply to each ppt individually
 def add_spike_counts(events_df, waveform_df, s_min=0, b_min=0):
 
@@ -70,20 +65,32 @@ def add_spike_counts(events_df, waveform_df, s_min=0, b_min=0):
     return spike_count_df
 
 
-#%% Script
-spike_counts_list = []
-for ppt in np.unique(waveform_data["ppt"]):
-    
-    print(f"Counting spikes for ppt{ppt}")
+def count_spikes_per_ppt(waveform_data=None, event_data=None, s_min=0.3, b_min=0.3):
 
-    temp_waveform = waveform_data[waveform_data["ppt"] == ppt]
-    temp_events = event_data[event_data["ppt"] == ppt]
+    if waveform_data is None or event_data is None:
+        print("Loading data from CSV...")
+        waveform_data = pd.read_csv("./all_spike_waveforms.csv")
+        event_data = pd.read_csv("./all_events.csv")
 
-    spike_counts = add_spike_counts(temp_events, temp_waveform, s_min=0.3, b_min=0.3)
+    spike_counts_list = []
+    for ppt in np.unique(waveform_data["ppt"]):
+        
+        print(f"Counting spikes for ppt{ppt}")
 
-    spike_counts_list.append(spike_counts)
+        temp_waveform = waveform_data[waveform_data["ppt"] == ppt]
+        temp_events = event_data[event_data["ppt"] == ppt]
 
-spike_counts = pd.concat(spike_counts_list, ignore_index=True)
+        spike_counts = add_spike_counts(
+            temp_events, temp_waveform, s_min=s_min, b_min=b_min
+        )
 
-#%% Save spike counts
-spike_counts.to_csv("spike_counts.csv", index=False)
+        spike_counts_list.append(spike_counts)
+
+    spike_counts = pd.concat(spike_counts_list, ignore_index=True)
+
+    return spike_counts
+
+#%% Run
+if __name__ == "__main__":
+    spike_counts = count_spikes_per_ppt()
+    spike_counts.to_csv("spike_counts.csv", index=False)

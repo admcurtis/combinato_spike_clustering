@@ -14,42 +14,47 @@ def sd_threshold(num_comparisons, fwer=0.05):
     return z_threshold
 
 
-#%% Script
-spike_data = pd.read_csv("./spike_counts.csv")
+def detect_concepts(spike_data=None):
 
-spike_stats = (
-    spike_data
-    .groupby(by=["ppt", "sensor", "unit", "stimulus"])["n_spikes"]
-    .agg(["mean", "std", "median"])
-    .reset_index()
-)
+    if spike_data is None:
+        print("Loading data from CSV...")
+        spike_data = pd.read_csv("./spike_counts.csv")
 
-baselines = spike_stats[spike_stats["stimulus"] == "BASELINE"].copy()
-stimuli = spike_stats[spike_stats["stimulus"] != "BASELINE"].copy()
-
-z_threshold = sd_threshold(stimuli.shape[0])
-
-baselines["threshold"] = baselines["mean"] + (baselines["std"] * z_threshold)
-
-stimuli = pd.merge(
-    stimuli,
-    baselines[["ppt", "sensor", "unit", "mean", "std", "threshold"]],
-    on=["ppt", "sensor", "unit"],
-    suffixes=("", "_baseline")
+    spike_stats = (
+        spike_data
+        .groupby(by=["ppt", "sensor", "unit", "stimulus"])["n_spikes"]
+        .agg(["mean", "std", "median"])
+        .reset_index()
     )
 
-stimuli["concept_cell"] = np.where(
-    stimuli["median"] > stimuli["threshold"],
-    1,
-    0
-)
+    baselines = spike_stats[spike_stats["stimulus"] == "BASELINE"].copy()
+    stimuli = spike_stats[spike_stats["stimulus"] != "BASELINE"].copy()
 
-concepts = stimuli[
-    (stimuli["concept_cell"] == 1) &
-    (stimuli["median"] >= 2)
-]
+    z_threshold = sd_threshold(stimuli.shape[0])
 
-print(concepts)
+    baselines["threshold"] = baselines["mean"] + (baselines["std"] * z_threshold)
+
+    stimuli = pd.merge(
+        stimuli,
+        baselines[["ppt", "sensor", "unit", "mean", "std", "threshold"]],
+        on=["ppt", "sensor", "unit"],
+        suffixes=("", "_baseline")
+        )
+
+    stimuli["concept_cell"] = np.where(
+        stimuli["median"] > stimuli["threshold"],
+        1,
+        0
+    )
+
+    concepts = stimuli[
+        (stimuli["concept_cell"] == 1) &
+        (stimuli["median"] >= 2)
+    ]
+
+    return concepts
 
 #%% Save
-concepts.to_csv("./detected_concepts.csv", index=False)
+if __name__ == "__main__":
+    concepts = detect_concepts()
+    concepts.to_csv("./detected_concepts.csv", index=False)

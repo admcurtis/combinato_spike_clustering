@@ -27,7 +27,7 @@ def create_waveform_df(spikes_per_stimulus, sensor, ppt_num):
     return df_long
 
 
-def create_event_df(stim_start_end, cluster_labels, sensor, ppt_num, tmin=0.0):
+def create_event_df(stim_start_end, cluster_labels, sensor, ppt_num):
 
     rows = []
     for stim, intervals in stim_start_end.items():

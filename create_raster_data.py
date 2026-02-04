@@ -2,81 +2,114 @@
 import pandas as pd
 import numpy as np
 
-#%% Load data
-concept_cells = pd.read_csv("./detected_concepts.csv")
-spike_data = pd.read_csv("./all_spike_waveforms.csv")
-event_times = pd.read_csv("./spike_counts.csv")
-
 
 #%% Process data
-# Get a dataframe of spikes to each concept cell
-concept_spikes = spike_data.merge(
-    concept_cells,
-    on=["ppt", "sensor", "unit", "stimulus"],
-    how="inner"
-)
-concept_spikes["unit"] = concept_spikes["unit"].astype(int)
+def get_concept_trials(concept_cells=None, spike_data=None, event_times=None):
 
-concept_spikes = concept_spikes[["ppt", "sensor", "unit", "stimulus", "spike_time"]]
+    if concept_cells is None or spike_data is None or event_times is None:
+        print("Loading data from CSV...")
+        concept_cells = pd.read_csv("./detected_concepts.csv")
+        spike_data = pd.read_csv("./all_spike_waveforms.csv")
+        event_times = pd.read_csv("./spike_counts.csv")
 
-# Get dataframe of spikes at baseline
-baseline_spikes = spike_data[spike_data["stimulus"] == "BASELINE"]
+    # Get a dataframe of spikes to each concept cell
+    concept_spikes = spike_data.merge(
+        concept_cells,
+        on=["ppt", "sensor", "unit", "stimulus"],
+        how="inner"
+    )
+    concept_spikes["unit"] = concept_spikes["unit"].astype(int)
 
-# Get a dataframe of trial times for each concept cell.
-concept_intervals = event_times.merge(
-    concept_spikes[["ppt", "sensor", "unit", "stimulus"]].drop_duplicates(),
-    on=["ppt", "sensor", "unit", "stimulus"],
-    how="inner"
-)
+    concept_spikes = concept_spikes[["ppt", "sensor", "unit", "stimulus", "spike_time"]]
+
+    # Get dataframe of spikes at baseline
+    baseline_spikes = spike_data[spike_data["stimulus"] == "BASELINE"]
+
+    # Get a dataframe of trial times for each concept cell.
+    concept_intervals = event_times.merge(
+        concept_spikes[["ppt", "sensor", "unit", "stimulus"]].drop_duplicates(),
+        on=["ppt", "sensor", "unit", "stimulus"],
+        how="inner"
+    )
+
+    return concept_spikes, concept_intervals, baseline_spikes
 
 
-#%% Get list of spike times for each concept trial
-spikes_list = []
-bl_spike_list = []
+def list_spikes_per_concept_trial(concept_spikes, concept_intervals, baseline_spikes):
 
-for row in concept_intervals.itertuples(index=False):
+    spikes_list = []
+    bl_spike_list = []
 
-    stim_spikes = concept_spikes[
-        (concept_spikes["ppt"] == row.ppt) &
-        (concept_spikes["sensor"] == row.sensor) &
-        (concept_spikes["unit"] == row.unit) &
-        (concept_spikes["stimulus"] == row.stimulus)
+    for row in concept_intervals.itertuples(index=False):
+
+        stim_spikes = concept_spikes[
+            (concept_spikes["ppt"] == row.ppt) &
+            (concept_spikes["sensor"] == row.sensor) &
+            (concept_spikes["unit"] == row.unit) &
+            (concept_spikes["stimulus"] == row.stimulus)
+        ]
+
+        stim_spikes = stim_spikes["spike_time"][
+            (stim_spikes["spike_time"] >= row.start) &
+            (stim_spikes["spike_time"] <= row.end)
+        ]
+
+        bl_spikes = baseline_spikes[
+            (baseline_spikes["ppt"] == row.ppt) &
+            (baseline_spikes["sensor"] == row.sensor) &
+            (baseline_spikes["unit"] == row.unit) 
+        ]
+
+        bl_spikes = bl_spikes["spike_time"][
+            (bl_spikes["spike_time"] >= row.start - 0.3) &
+            (bl_spikes["spike_time"] <= row.end + 0.3)
+        ]
+
+        stim_spikes = [] if stim_spikes.empty else list(stim_spikes)
+        bl_spikes = [] if bl_spikes.empty else list(bl_spikes)
+
+        spikes_list.append(stim_spikes)
+        bl_spike_list.append(bl_spikes)
+
+    return spikes_list, bl_spike_list
+
+
+def combine_stim_and_bl_spikes(concept_intervals, spikes_list, bl_spike_list):
+
+    combined_spikes = concept_intervals.copy()
+
+    # Place spikes during stimulus and spikes at baseline into a single list
+    combined_spikes["all_spikes"] = [
+        stim_spike + bl_spike for stim_spike, bl_spike in zip(spikes_list, bl_spike_list)
     ]
 
-    stim_spikes = stim_spikes["spike_time"][
-        (stim_spikes["spike_time"] >= row.start) &
-        (stim_spikes["spike_time"] <= row.end)
-    ]
+    # Normalise spike times so they are relative to the stimulus onset
+    combined_spikes["rel_spikes"] = combined_spikes.apply(
+        lambda row: np.array(row["all_spikes"]) - row["start"],
+        axis=1
+    )
 
-    bl_spikes = baseline_spikes[
-        (baseline_spikes["ppt"] == row.ppt) &
-        (baseline_spikes["sensor"] == row.sensor) &
-        (baseline_spikes["unit"] == row.unit) 
-    ]
-
-    bl_spikes = bl_spikes["spike_time"][
-        (bl_spikes["spike_time"] >= row.start - 0.3) &
-        (bl_spikes["spike_time"] <= row.end + 0.3)
-    ]
-
-    stim_spikes = [] if stim_spikes.empty else list(stim_spikes)
-    bl_spikes = [] if bl_spikes.empty else list(bl_spikes)
-
-    spikes_list.append(stim_spikes)
-    bl_spike_list.append(bl_spikes)
+    return combined_spikes 
 
 
-# Place spikes during stimulus and spikes at baseline into a single list
-concept_intervals["all_spikes"] = [
-    stim_spike + bl_spike for stim_spike, bl_spike in zip(spikes_list, bl_spike_list)
-]
+def create_raster_data(concept_cells=None, spike_data=None, event_times=None):
 
-# Normalise spike times so they are relative to the stimulus onset
-concept_intervals["rel_spikes"] = concept_intervals.apply(
-    lambda row: np.array(row["all_spikes"]) - row["start"],
-    axis=1
-)
+    concept_spikes, concept_intervals, baseline_spikes = get_concept_trials(
+        concept_cells, spike_data, event_times
+    )
 
-#%% Save
-concept_intervals.to_pickle("raster_data.pkl")
+    spikes_list, bl_spike_list = list_spikes_per_concept_trial(
+         concept_spikes, concept_intervals, baseline_spikes
+    )
+
+    combined_spikes = combine_stim_and_bl_spikes(
+        concept_intervals, spikes_list, bl_spike_list
+    )
+
+    return combined_spikes
+
+#%% Run
+if __name__ == "__main__":
+    concept_intervals = create_raster_data()
+    concept_intervals.to_pickle("raster_data.pkl")
 
