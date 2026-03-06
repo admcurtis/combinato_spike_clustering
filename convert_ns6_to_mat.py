@@ -4,6 +4,7 @@ from scipy.io import savemat
 import neo # for .ns6
 import numpy as np
 import os
+from brpylib import NsxFile
 
 #%% Load data and convert to .mat
 
@@ -18,21 +19,20 @@ for file in files:
     ppt = file[16:19]
 
     # Load .ns6
-    reader = neo.io.BlackrockIO(filename=filename)
-    block = reader.read_block()
+    reader = NsxFile(filename)
+    full_data = reader.getdata()
 
     # Extract signal
-    signal = block.segments[0].analogsignals[0]  
-    data = np.array(signal)
+    signal = np.array(full_data["data"]).squeeze()
 
     # Extract sampling rate
-    sr = float(signal.sampling_rate)
+    sr = float(full_data["samp_per_s"])
 
     # Create .mat structure
-    mat_struct = {"data": data, "sr": sr}
+    mat_struct = {"data": signal, "sr": sr}
 
     # Loop over sensors and create structure for each, save as .mat
-    for sensor in range(0, mat_struct["data"].shape[1]):
+    for sensor in range(0, mat_struct["data"].shape[0]):
 
         save_path = f"processed_data/ppt{ppt}/"
         os.makedirs(save_path, exist_ok=True)
@@ -40,9 +40,8 @@ for file in files:
         save_name = f"ppt{ppt}_sensor{sensor}.mat"
 
         temp_data = mat_struct.copy()
-        this_sensor = temp_data["data"][:,sensor]
+        this_sensor = temp_data["data"][sensor,:]
         temp_data["data"] = this_sensor
 
         # Save .mat
         savemat(save_path + save_name, temp_data)
-

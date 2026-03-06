@@ -49,6 +49,7 @@ def load_cluster_labels(sensor_path):
         neg_sort_file = f"{sensor_path}/sort_neg_ada/sort_cat.h5"
         with h5py.File(neg_sort_file, "r") as neg_sort_data:
             neg_cluster_idx = np.array(neg_sort_data["classes"])
+            neg_groups = np.array(neg_sort_data["groups"])
             return neg_cluster_idx
     except FileNotFoundError:
         return None

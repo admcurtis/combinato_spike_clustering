@@ -15,14 +15,14 @@ for ppt_dir in */; do
 
     # loop over .mat files and extract spikes
     for mat_file in *.mat; do
-        css-extract --matfile $mat_file;
+        css-extract --matfile $mat_file --matfile-scale-factor 0.1;
     done
 
     css-find-concurrent
     css-mask-artifacts
     css-plot-extracted
 
-    for directory in ppt*/; do
+    for directory in Patient*/; do
         cd $directory
         h5_file=(*h5)
 

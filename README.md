@@ -5,6 +5,8 @@ Each `.mat` file contains the data for a single channel.
 
 `.ns6` files can be converted to `.mat` using `convert_ns6_to_mat.py`.
 
+This script requires the use of [BlackRock's Python Utilities](https://github.com/BlackrockNeurotech/.Python-Utilities). The brpylib folder needs to be in `Lib/site-packages/` directory of the Python environement.
+
 Once converted, spike sorting can be performed from the command line using `cluster_data.sh`.
 
 The clustering requires a [Combinato installation](https://github.com/jniediek/combinato/).
