@@ -12,6 +12,9 @@ processed_data_no_artefact_rejection/
 z_bin/
 spike_waveforms.csv
 ScreeningStimuli/
+Python-Utilities-main/
+patient_data/
+processed_data_old/
 
 # Data
 *.csv
