@@ -15,7 +15,7 @@ for ppt_dir in */; do
 
     # loop over .mat files and extract spikes
     for mat_file in *.mat; do
-        css-extract --matfile $mat_file --matfile-scale-factor 0.1;
+        css-extract --matfile $mat_file --matfile-scale-factor 0.25;
     done
 
     css-find-concurrent

@@ -32,6 +32,7 @@ for patient, visits in groups.items():
         visit = visit.replace(" ", "")
         patient = patient.replace(" ", "")
 
+        # Load all runs for this visit
         visit_data = [NsxFile(f) for f in paths]
 
         # Sort chronologically
@@ -41,9 +42,25 @@ for patient, visits in groups.items():
         )
 
         full_data = [f.getdata() for f in sorted_data]
-        signals = [np.array(f["data"]).squeeze() for f in full_data]
 
+        signals = [np.array(f["data"]).squeeze() for f in full_data]
+        chan_ids = [f["elec_ids"] for f in full_data]
         samp_rates = [float(f["samp_per_s"]) for f in full_data]
+
+        # Sanity checks
+        assert all(sig.shape[0] == signals[0].shape[0] for sig in signals), (
+            f"Data shape differs across runs {patient} {visit}"
+        )
+
+        assert all(chans == chan_ids[0] for chans in chan_ids),  (
+            f"Chan ids do not match across runs {patient} {visit}"
+        )
+
+        assert all(rate == samp_rates[0] for rate in samp_rates), (
+            f"Sampling rate differs across runs {patient} {visit}"
+        )
+
+        chans = chan_ids[0]
         sr = samp_rates[0]
 
         print(f"concatenating {patient}, {visit}")
@@ -53,16 +70,17 @@ for patient, visits in groups.items():
         mat_struct = {"data": combined_signals, "sr": sr}
 
         print(f"Saving .mat data for {patient} {visit}")
-        for sensor in range(0, mat_struct["data"].shape[0]):
+        for i, chan in enumerate(chans):
 
             save_path = f"processed_data/{patient}/"
             os.makedirs(save_path, exist_ok=True)
 
-            save_name = f"{patient}_{visit}_sensor{sensor}.mat"
+            save_name = f"{patient}_{visit}_sensor{chan}.mat"
 
             temp_data = mat_struct.copy()
-            this_sensor = temp_data["data"][sensor,:]
+            this_sensor = temp_data["data"][i,:]
             temp_data["data"] = this_sensor
 
             # Save .mat
             savemat(save_path + save_name, temp_data)
+
