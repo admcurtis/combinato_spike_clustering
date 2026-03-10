@@ -26,16 +26,19 @@ for ppt_dir in */; do
         cd $directory
         h5_file=(*h5)
 
-        # Prepare .txt for sorting
-        css-prepare-sorting --neg --data $h5_file
-        job_file=(*txt)
+        # ---- Negative spikes ----
+        css-prepare-sorting --neg --data "$h5_file"
+        job_file=(sort_neg*txt)
+        css-cluster --jobs "$job_file"
+        css-combine --jobs "$job_file"
+        css-plot-sorted --neg --datafile "$h5_file" --label sort_neg_ada
 
-        # Cluster spikes
-        css-cluster --jobs $job_file
-        css-combine --jobs $job_file
-
-        # Create summary plots 
-        css-plot-sorted --neg --datafile $h5_file --label sort_neg_ada
+        # ---- Positive spikes ----
+        css-prepare-sorting --data "$h5_file"
+        job_file=(sort_pos*txt)
+        css-cluster --jobs "$job_file"
+        css-combine --jobs "$job_file"
+        css-plot-sorted --datafile "$h5_file" --label sort_pos_ada
 
         cd ..
     done
