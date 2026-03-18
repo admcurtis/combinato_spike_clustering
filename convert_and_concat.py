@@ -7,13 +7,23 @@ from pathlib import Path
 from collections import defaultdict
 from brpylib import NsxFile
 
+from convert_ns6_utils import (
+    get_odd_chans, remove_stimulus_chan, get_odd_signals,
+    sort_data_chronologically
+    )
+
 #%%
 os.makedirs("processed_data", exist_ok=True)
 log_file = "run_errors.txt"
 
 # Glob paths to all .ns6 files
 root = Path("../ieeg_data")
-ns6_files = [p for p in root.rglob("*.ns6") if "Visit" in str(p)]
+ns6_files = [
+    p for p in root.rglob("*.ns6")
+    if "Visit" in str(p)
+    and "Baseline" not in str(p)
+    and "Closed Loop" not in str(p)
+]
 
 # Patient x visit x path dictionary
 groups = defaultdict(lambda: defaultdict(list))
@@ -37,11 +47,7 @@ for patient, visits in groups.items():
         # Load all runs for this visit
         visit_data = [NsxFile(f) for f in paths]
 
-        # Sort chronologically
-        sorted_data = sorted(
-            visit_data,
-            key=lambda x: x.basic_header["TimeOrigin"]
-        )
+        sorted_paths, sorted_data = sort_data_chronologically(paths, visit_data)
 
         full_data = [f.getdata() for f in sorted_data]
 
@@ -50,11 +56,20 @@ for patient, visits in groups.items():
         samp_rates = [float(f["samp_per_s"]) for f in full_data]
         samples = [data.shape[-1] for data in signals]
 
+        # Extract only odd numbered chans (even numbered chans are not brain data)
+        odd_chans, odd_idxs = get_odd_chans(chan_ids)
+
+        # Get signals only corresponding to odd-numbered channels
+        odd_signals = get_odd_signals(signals, odd_idxs)
+
+        # Remove stimulus channels
+        final_chans, final_signals = remove_stimulus_chan(odd_chans, odd_signals)
+
         # Sanity checks
-        if not all(sig.shape[0] == signals[0].shape[0] for sig in signals):
+        if not all(sig.shape[0] == final_signals[0].shape[0] for sig in final_signals):
             error_msg = "Num chans differs across runs "
 
-        if not all(chans == chan_ids[0] for chans in chan_ids):
+        if not all(chans == final_chans[0] for chans in final_chans):
             error_msg += "Chan ids do not match across runs "
 
         if not all(rate == samp_rates[0] for rate in samp_rates):
@@ -70,25 +85,20 @@ for patient, visits in groups.items():
         # Sample rate
         sr = samp_rates[0]
 
-        # Extract only even numbered chans (odd numbered chans are not brain data)
-        even_idx = [i for i, chan in enumerate(chan_ids[0]) if int(chan) % 2 ==1]
-        even_chans = [chan_ids[0][i] for i in even_idx]
-        even_signals = [sig[even_idx, :] for sig in signals]
-
         # Save
         print(f"Saving .mat data for {patient} {visit}")
-        for i, chan in enumerate(even_chans):
+        for i, chan in enumerate(odd_chans):
 
             print(f"concatenating {patient}, {visit}, channel {chan}")
             combined_signals = np.concatenate(
-                [sig[i, :] for sig in even_signals]
+                [sig[i, :] for sig in odd_signals]
             )
 
             # Create .mat structure
             mat_struct = {
                 "data": combined_signals, 
                 "sr": sr,
-                "runs": paths,
+                "runs": sorted_paths,
                 "samps_per_run": samples
             }
 

@@ -16,7 +16,10 @@ Python-Utilities-main/
 patient_data/
 processed_data2/
 processed_data_old/
+clustering_plots/
+clustering_plot
 
 # Data
 *.csv
 *.pkl
+*.xlsx

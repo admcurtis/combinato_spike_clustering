@@ -18,7 +18,7 @@ for ppt_dir in */; do
         css-extract --matfile $mat_file --matfile-scale-factor 0.25;
     done
 
-    css-mask-artifacts --no-concurrent 
+    css-mask-artifacts
     css-plot-extracted
 
     for directory in Patient*/; do
