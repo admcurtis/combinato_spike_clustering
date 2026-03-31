@@ -57,23 +57,19 @@ def remove_stimulus_chan(chans, signals, stim_chans=(129, 257)):
     return new_chans, new_signals
 
 
-def get_selected_chans(chan_ids, filtered_selection, paths):
+def get_selected_chans(chan_ids, chans_in_all_runs):
     """
     Takes a list of lists where each inner list is the channel ids in each run in a visit
     Returns a list of lists with only the channels that were manually selected.
     The manually selected channels need to be stored in a csv and loaded in. 
     """
     selected_idxs = []
-    for chan_lst, run in zip(chan_ids, paths):
+    for chan_lst in chan_ids:
 
-        this_run_ids = set(
-            filtered_selection.loc[
-                filtered_selection["run"] == run, "chan_id"
-            ].values
-        )
-
-        print(f"this run ids: {list(this_run_ids)}")
-        selected_idx = [i for i, chan in enumerate(chan_lst) if chan in this_run_ids]
+        # get indices of selected channels
+        selected_idx = [
+            i for i, chan in enumerate(chan_lst) if chan in chans_in_all_runs
+        ]
         selected_idxs.append(selected_idx)
     
     selected_chans = []
@@ -82,3 +78,13 @@ def get_selected_chans(chan_ids, filtered_selection, paths):
         selected_chans.append(selected)
 
     return selected_chans, selected_idxs
+
+
+def get_selected_signals(signals, chan_indx):
+
+    selected_signals = []
+    for signal, chans in zip(signals, chan_indx):
+        selected_signal = signal[chans, :]
+        selected_signals.append(selected_signal)
+
+    return selected_signals
