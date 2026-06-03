@@ -16,7 +16,7 @@ def get_ppt_sensor_nums(sensor_path):
     return ppt_num, sensor
 
 
-def load_spike_data(sensor_path, ppt_num, sensor):
+def load_spike_data(sensor_path, ppt_num, sensor, remove_artifacts=True):
     """
     Return waveforms and onset times for a given participant and sensor. 
     Removes artifact spikes if neccessary
@@ -30,10 +30,11 @@ def load_spike_data(sensor_path, ppt_num, sensor):
         neg_times = ppt_data["neg"]["times"][:] / 1000  # convert ms to seconds
 
         # remove artifacts if necessary 
-        if "artifacts" in ppt_data["neg"]:
-            neg_artifacts = ppt_data["neg"]["artifacts"][:]
-            neg_spikes = neg_spikes[neg_artifacts == 0, :]
-            neg_times = neg_times[neg_artifacts == 0]
+        if remove_artifacts:
+            if "artifacts" in ppt_data["neg"]:
+                neg_artifacts = ppt_data["neg"]["artifacts"][:]
+                neg_spikes = neg_spikes[neg_artifacts == 0, :]
+                neg_times = neg_times[neg_artifacts == 0]
 
     return neg_spikes, neg_times
 
