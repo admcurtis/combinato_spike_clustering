@@ -16,13 +16,13 @@ def get_ppt_sensor_nums(sensor_path):
     return ppt_num, sensor
 
 
-def load_spike_data(sensor_path, ppt_num, sensor, remove_artifacts=True):
+def load_spike_data(sensor_path, ppt_num, sensor, visit, remove_artifacts=True):
     """
     Return waveforms and onset times for a given participant and sensor. 
     Removes artifact spikes if neccessary
     """
 
-    path_to_data = f"{sensor_path}/data_ppt{ppt_num}_sensor{sensor}.h5"
+    path_to_data = f"{sensor_path}/data_Patient{ppt_num}_Visit{visit}_sensor{sensor}.h5"
 
     # load h5 data containing spikes
     with h5py.File(path_to_data, "r") as ppt_data:
