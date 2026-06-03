@@ -12,8 +12,7 @@ from convert_ns6_utils import sort_data_chronologically
 n = 20 # number of samples to include in xlsx
 samp_cols = [f"samp{j+1}" for j in range(n)]
 
-#%%
-# Glob paths to all .ns6 files
+#%% Glob paths to all .ns6 files
 root = Path("../ieeg_data")
 ns6_files = [
     p for p in root.rglob("*.ns6")
@@ -22,7 +21,7 @@ ns6_files = [
     and "Closed Loop" not in str(p)
 ]
 
-# Patient x visit x path dictionary
+#%% Patient x visit x path dictionary
 groups = defaultdict(lambda: defaultdict(list))
 for path in ns6_files:
     try:
