@@ -10,6 +10,7 @@ import os
 from convert_ns6_utils import (
     sort_data_chronologically, get_selected_chans, get_selected_signals
 )
+import gc
 
 #%%
 sensor_selections = pd.read_csv("./practice_sensor_selection.csv")
@@ -78,6 +79,8 @@ for patient, visits in groups.items():
         visit_data = [NsxFile(f) for f in paths]
 
         sorted_paths, sorted_data = sort_data_chronologically(paths, visit_data)
+        del visit_data # save memory
+        gc.collect()
 
         full_data = [f.getdata() for f in sorted_data]
 
@@ -85,6 +88,8 @@ for patient, visits in groups.items():
         chan_ids = [f["elec_ids"] for f in full_data]
         samp_rates = [float(f["samp_per_s"]) for f in full_data]
         samples = [data.shape[-1] for data in signals]
+        del full_data # save memory
+        gc.collect()
 
         chan_id, chan_indx = get_selected_chans(chan_ids, chans_in_all_runs)
         selected_signals = get_selected_signals(signals, chan_indx)
@@ -135,6 +140,11 @@ for patient, visits in groups.items():
 
             # Save .mat
             savemat(save_path + save_name, mat_struct)
+        
+        del signals
+        del selected_signals
+        del sorted_data
+        gc.collect()
 
 
 
