@@ -1,7 +1,12 @@
 # %% Dependencies
 import numpy as np
 from scipy.io import loadmat
+from pathlib import Path
+import os
 from spike_utils import load_spike_data
+
+processed_data = Path(os.getcwd()) / "processed_data"
+patients = list(processed_data.glob("Patient*/"))
 
 # %% Load data 
 spikes, times = load_spike_data(
