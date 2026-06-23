@@ -13,6 +13,7 @@ patients = list(processed_data.glob("Patient*/"))
 # %%
 for patient in patients:
 
+    os.makedirs(patient / "sliced_after_clustering", exist_ok=True)
     concat_mat_files = list(patient.glob("*.mat"))
 
     for file in concat_mat_files:
@@ -33,7 +34,7 @@ for patient in patients:
         # Load cluster labels
         labels = load_cluster_labels(clustered_path)
 
-        # Times will be the last column in the array
+        # Attach labels and times to spike waveform array as the final two columns
         spikes_labs_times = np.column_stack([spikes, labels, times])
 
         # Load unclustered data to get sample rate and number of samples per run metadata
@@ -45,7 +46,7 @@ for patient in patients:
         # Times to slice at. Spikes are in seconds, so use samples divided by sample rate
         slice_times = np.cumsum(samps_per_run)  / sr
 
-        # Slice the spikes and times.
+        # Slice the spikes, labels and, times.
         new_slices = []
         for i in range(len(slice_times)):
             
@@ -57,15 +58,22 @@ for patient in patients:
             ]
             new_slices.append(time_slice)
 
-        # Create .mat strcuture and save
-        mat_struct = {
-            "spikes": [s[:, :-2] for s in new_slices], # All columns except last
-            "labels": [s[:, -2] for s in new_slices], # Second to last column
-            "times": [s[:, -1] for s in new_slices], # Last column
-            "runs": runs,
-            "samps_per_run": samps_per_run
-        }
+        for run, data_slice, samples in zip(runs, new_slices, samps_per_run):
+            
+            print(f"Processing: {run} containing {data_slice.shape[0]} spikes")
 
-        # Save .mat
-        save_name = f"Patient{ppt}_Visit{visit}_sensor{sensor}_sliced.mat"
-        savemat(patient / save_name, mat_struct)
+            # Create .mat strcuture and save
+            mat_struct = {
+                "spikes": data_slice[:, :-2], # All columns except last
+                "labels": data_slice[:, -2], # Second to last column
+                "times": data_slice[:, -1] , # Last column
+                "run": run,
+                "samples": samples,
+                "sr": sr
+            }
+
+            task = Path(run).parent.stem
+
+            # Save .mat
+            save_name = f"Patient{ppt}_Visit{visit}_sensor{sensor}_{task}.mat"
+            savemat(patient / "sliced_after_clustering" / save_name, mat_struct)
