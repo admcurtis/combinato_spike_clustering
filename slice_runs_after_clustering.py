@@ -33,21 +33,25 @@ for patient in patients:
         
         # Load cluster labels
         labels = load_cluster_labels(clustered_path)
+        if labels is None:
+            print("No labels found! Assuming no neurons for this sensor")
+            continue
 
         # Attach labels and times to spike waveform array as the final two columns
         spikes_labs_times = np.column_stack([spikes, labels, times])
 
-        # Load unclustered data to get sample rate and number of samples per run metadata
+        # Load unclustered data to get sample rate and number of samples per run data
         concat_data = loadmat(patient / f"Patient{ppt}_Visit{visit}_sensor{sensor}.mat")
         sr = int(concat_data["sr"].squeeze())
         runs = concat_data["runs"]
         samps_per_run = concat_data["samps_per_run"].squeeze()
 
-        # Times to slice at. Spikes are in seconds, so use samples divided by sample rate
+        # Times to slice at. Spikes are in seconds, so use samples over sample rate
         slice_times = np.cumsum(samps_per_run)  / sr
 
         # Slice the spikes, labels and, times.
         new_slices = []
+
         for i in range(len(slice_times)):
             
             start = 0 if i == 0 else slice_times[i - 1]
@@ -56,17 +60,23 @@ for patient in patients:
             time_slice = spikes_labs_times[
                 (spikes_labs_times[:,-1] >= start) & (spikes_labs_times[:,-1] < end)
             ]
-            new_slices.append(time_slice)
 
-        for run, data_slice, samples in zip(runs, new_slices, samps_per_run):
+            # normalise times
+            time_slice[:, -1] = time_slice[:, -1] - start
+
+            new_slices.append(time_slice)
             
-            print(f"Processing: {run} containing {data_slice.shape[0]} spikes")
+
+        for run, data, samples in zip(runs, new_slices, samps_per_run):
+            
+            print(f"Processing: {run} containing {data.shape[0]} spikes")
+
 
             # Create .mat strcuture and save
             mat_struct = {
-                "spikes": data_slice[:, :-2], # All columns except last
-                "labels": data_slice[:, -2], # Second to last column
-                "times": data_slice[:, -1] , # Last column
+                "spikes": data[:, :-2], # All columns except last
+                "labels": data[:, -2], # Second to last column
+                "times": data[:, -1] , # Last column
                 "run": run,
                 "samples": samples,
                 "sr": sr
