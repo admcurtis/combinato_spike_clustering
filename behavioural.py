@@ -2,27 +2,60 @@
 import numpy as np
 from scipy.io import loadmat
 from pathlib import Path
+import pandas as pd
 
 # %%
-behave_path = Path(
-    "../ieeg_data/Patient 5/Visit 1/Memory Task/Patient5_Visit1_assMemData.mat"
-)
-
-spike_path = Path(
-    "processed_data/Patient5/sliced_after_clustering/Patient5_Visit1_sensor1_Memory Task.mat"
-)
+root = Path("./processed_data")
+spike_path = root / "Patient5/sliced_after_clustering/Patient5_Visit1_sensor1_Memory Task.mat"
 
 # %% Load
 
-behave_data = loadmat(
-    behave_path,
-    squeeze_me=True,
-    struct_as_record=False
-)
-behave_data = behave_data["eegData"]
+# behave_data = loadmat(
+#     behave_path,
+#     squeeze_me=True,
+#     struct_as_record=False
+# )
+# behave_data = behave_data["eegData"]
+# last_trial = np.nanmax(behave_data.Test.Times)
+
+patient, visit, sensor, task = spike_path.stem.split("_")
 
 spike_data = loadmat(spike_path)
 
-last_spike = np.max(spike_data["times"])
+waveforms = spike_data["spikes"]
+spike_times = spike_data["times"].squeeze()
+neurons = spike_data["labels"].squeeze()
 
-last_trial = np.nanmax(behave_data.Test.Times)
+if not waveforms.shape[0] == spike_times.shape[0] == neurons.shape[0]:
+    raise RuntimeError(
+        f"{patient} {visit} {sensor} {task}: waveform, sensor, neuron shape mismatch")
+
+rows = waveforms.shape[0]
+
+waveform_df = pd.DataFrame(
+    spike_data["spikes"],
+    columns=[f"s{i}" for i in range(64)]
+)
+
+df = pd.DataFrame(
+    {"pateint":    [patient for _ in range(rows)],
+     "visit":      [visit for _ in range(rows)],
+     "sensor":     [sensor for _ in range(rows)],
+     "task":       [task for _ in range(rows)],
+     "neuron":     list(neurons),
+     "spike_time": list(spike_times)
+     }
+)
+
+df = pd.concat(
+    [df, waveform_df],
+    axis=1
+)
+
+
+
+
+
+
+
+
