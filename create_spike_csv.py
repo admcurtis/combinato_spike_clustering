@@ -1,5 +1,5 @@
 # %% Dependencies
-import numpy
+import numpy as np
 from scipy.io import loadmat
 from pathlib import Path
 import pandas as pd
@@ -20,8 +20,8 @@ for patient_path in patients:
 
         spike_data = loadmat(spike_path)
 
-        spike_times = spike_data["times"].squeeze()
-        neurons = spike_data["labels"].squeeze()
+        spike_times = np.ravel(spike_data["times"])
+        neurons = np.ravel(spike_data["labels"])
         waveforms = spike_data["spikes"]
 
         if not spike_times.shape[0] == neurons.shape[0] == waveforms.shape[0] :
