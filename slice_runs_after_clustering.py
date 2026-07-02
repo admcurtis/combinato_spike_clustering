@@ -28,7 +28,8 @@ for patient in patients:
             clustered_path,
             ppt_num=ppt,
             sensor=sensor,
-            visit=visit
+            visit=visit,
+            remove_artifacts=False
         )
         
         # Load cluster labels
@@ -74,8 +75,8 @@ for patient in patients:
 
             # Create .mat strcuture and save
             mat_struct = {
-                "spikes": data[:, :-2], # All columns except last
-                "labels": data[:, -2], # Second to last column
+                "spikes": data[:, :-3], # All columns except last 3
+                "labels": data[:, -3:-1], # Second and third to last columns
                 "times": data[:, -1] , # Last column
                 "run": run,
                 "samples": samples,

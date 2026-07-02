@@ -29,13 +29,6 @@ def load_spike_data(sensor_path, ppt_num, sensor, visit, remove_artifacts=True):
         neg_spikes = ppt_data["neg"]["spikes"][:]
         neg_times = ppt_data["neg"]["times"][:] / 1000  # convert ms to seconds
 
-        # remove artifacts if necessary 
-        if remove_artifacts:
-            if "artifacts" in ppt_data["neg"]:
-                neg_artifacts = ppt_data["neg"]["artifacts"][:]
-                neg_spikes = neg_spikes[neg_artifacts == 0, :]
-                neg_times = neg_times[neg_artifacts == 0]
-
     return neg_spikes, neg_times
 
 
@@ -51,7 +44,13 @@ def load_cluster_labels(sensor_path):
         with h5py.File(neg_sort_file, "r") as neg_sort_data:
             neg_cluster_idx = np.array(neg_sort_data["classes"])
             neg_groups = np.array(neg_sort_data["groups"])
-            return neg_cluster_idx
+
+            # Pair groups with classes
+            lookup_dict = dict(zip(neg_groups[:, 0], neg_groups[:, 1]))
+            map_groups_to_class = np.array([lookup_dict[x] for x in neg_cluster_idx])
+            final_labels = np.column_stack((neg_cluster_idx, map_groups_to_class))
+
+            return final_labels
     except FileNotFoundError:
         return None
 

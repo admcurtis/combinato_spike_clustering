@@ -21,22 +21,21 @@ for patient_path in patients:
         spike_data = loadmat(spike_path)
 
         spike_times = np.ravel(spike_data["times"])
-        neurons = np.ravel(spike_data["labels"])
+        neurons = spike_data["labels"]
         waveforms = spike_data["spikes"]
 
         if not spike_times.shape[0] == neurons.shape[0] == waveforms.shape[0] :
             raise RuntimeError(
                 f"{patient} {visit} {sensor} {task}: spike data shape mismatch")
 
-        nrows = waveforms.shape[0]
-
         spike_times_df = pd.DataFrame(
-            {"patient":   [patient for _ in range(nrows)],
-            "visit":      [visit for _ in range(nrows)],
-            "sensor":     [sensor for _ in range(nrows)],
-            "task":       [task for _ in range(nrows)],
-            "neuron":     list(neurons),
-            "spike_time": list(spike_times)
+            {"patient":         patient,
+            "visit":            visit,
+            "sensor":           sensor,
+            "task":             task,
+            "neuron_class":     neurons[:,0],
+            "neuron_group":     neurons[:,1],
+            "spike_time":       spike_times
             }
         )
 
@@ -58,7 +57,15 @@ full_df = pd.concat(
 )
 
 full_df.sort_values(
-    by=["patient", "visit", "sensor", "task", "neuron", "spike_time"],
+    by=[
+        "patient",
+        "visit",
+        "sensor",
+        "neuron_group",
+        "neuron_class",
+        "task",
+        "spike_time"
+    ],
     inplace=True
 )
 
@@ -71,10 +78,3 @@ full_df.to_csv(
     "all_spikes.csv",
     index=False
 )
-
-
-
-
-
-
-
