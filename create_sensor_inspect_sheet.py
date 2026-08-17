@@ -2,7 +2,6 @@
 # type: ignore
 import numpy as np
 import pandas as pd
-import openpyxl
 from pathlib import Path
 from collections import defaultdict
 from brpylib import NsxFile
@@ -59,7 +58,10 @@ with pd.ExcelWriter("visually_inspect_sensors.xlsx", engine="openpyxl") as write
                 meds  = np.median(run, axis=1)
                 stds  = np.std(run, axis=1)
 
-                qrmed = np.abs(meds) / 0.6745
+                qrmed = np.median(
+                    np.abs(run) / 0.6745,
+                    axis=1
+                )
 
                 first_n_samps = run[:, :n]
                 samp_df = pd.DataFrame(first_n_samps, columns=samp_cols)
