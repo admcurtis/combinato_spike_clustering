@@ -7,9 +7,7 @@ from pathlib import Path
 from collections import defaultdict
 from brpylib import NsxFile
 import os
-from convert_ns6_utils import (
-    sort_data_chronologically, get_selected_chans, get_selected_signals
-)
+from convert_ns6_utils import sort_data_chronologically
 import gc
 
 #%%
@@ -28,7 +26,7 @@ ns6_files = [
     and "Closed Loop" not in str(p)
 ]
 
-# Patient x visit x path dictionary
+# %% Patient x visit x path dictionary
 groups = defaultdict(lambda: defaultdict(list))
 for path in ns6_files:
     try:
@@ -58,10 +56,12 @@ for patient, visits in groups.items():
                 f.write(f"{patient}, {visit}: Not found in selections dataframe\n\n")
             continue
 
+        # Get the channel names in each run
         chans_per_run = [
-            set(df["chan_id"]) for _, df in selected_sensors.groupby("run")
+            (run, list(df["chan_id"])) for run, df in selected_sensors.groupby("run")
         ]
 
+        # Log an error if there are runs with no sensors
         if len(chans_per_run) != len(paths):
             msg = "Selection does not contain channels from all runs"
             print(f"{patient}, {visit}: {msg}")
@@ -69,68 +69,110 @@ for patient, visits in groups.items():
                 f.write(f"{patient}, {visit}: {msg}\n\n")
             continue
 
-        try:
-            chans_in_all_runs = set.intersection(*chans_per_run)
-        except TypeError:
+        # Check to see whether any runs have repeating channel names
+        repeating = [
+            (run, arr) for run, arr in chans_per_run if len(set(arr)) < len(arr)
+        ]
+
+        if repeating:
+            msg = "Some runs have channel names that repeat"
+            print(f"{patient}, {visit}: {msg}")
             with open(f"processed_data/{log_file}", "a") as f:
-                f.write(f"{patient}, {visit}: No channels common in all runs\n\n")
+                f.write(f"{patient}, {visit}: {msg}\n\n")
             continue
 
-        visit_data = [NsxFile(f) for f in paths]
+        # Get channels that have been selected and occur in all runs. 
+        try:
+            chan_lists = [set(chan_list) for _, chan_list in chans_per_run]
+            chan_set = set.intersection(*chan_lists)
+            # Convert set to list to ensure order preservation
+            chans_in_all_runs = [chan for chan in chan_lists[0] if chan in chan_set] 
+        except TypeError:
+            with open(f"processed_data/{log_file}", "a") as f:
+                f.write(f"{patient}, {visit}: No channels shared in all runs\n\n")
+            continue
 
-        sorted_paths, sorted_data = sort_data_chronologically(paths, visit_data)
+        # Load the .ns6 file for this visit
+        visit_data = [(f, NsxFile(f)) for f in paths]
+
+        sorted_data = sort_data_chronologically(visit_data)
+
         del visit_data # save memory
         gc.collect()
 
-        full_data = [f.getdata() for f in sorted_data]
+        full_data = {}
+        sample_rates = []
+        for path, data in sorted_data:
+            temp_data = data.getdata()
+            task_name = path.split("/")[-2]
+            signal = np.array(temp_data["data"]).squeeze() 
+            sr = float(temp_data["samp_per_s"])
 
-        signals = [np.array(f["data"]).squeeze() for f in full_data]
-        chan_ids = [f["elec_ids"] for f in full_data]
-        samp_rates = [float(f["samp_per_s"]) for f in full_data]
-        samples = [data.shape[-1] for data in signals]
-        del full_data # save memory
-        gc.collect()
+            sample_rates.append(sr)
 
-        chan_id, chan_indx = get_selected_chans(chan_ids, chans_in_all_runs)
-        selected_signals = get_selected_signals(signals, chan_indx)
+            full_data[task_name] = {
+                "path":      path,
+                "signal":    signal,
+                "chan_ids":  temp_data["elec_ids"],
+                "sr":        sr,
+                "samples":   signal.shape[-1]
+            }
 
-        # Sanity checks
-        if not all(sig.shape[0] == selected_signals[0].shape[0]
-                   for sig in selected_signals
-                ):
-            error_msg = "Num chans differs across runs "
+            del temp_data
+            gc.collect()
 
-        if not all(chans == chan_id[0] for chans in chan_id):
-            error_msg += "Chan ids do not match across runs "
+        # Add keys to the selected channels and their respective signals
+        for task, data in full_data.items():
 
-        if not all(rate == samp_rates[0] for rate in samp_rates):
-            error_msg += "Sampling rate differs across runs "
+            chan_ids = data["chan_ids"]
+            signal   = data["signal"]
+            selected_idx = [
+                i for i, chan in enumerate(chan_ids) if chan in chans_in_all_runs
+            ]
 
-        if error_msg:
-            with open(f"processed_data/{log_file}", "a") as f:
-                f.write(f"{patient}, {visit}, {error_msg}\n")
-                f.write("\n".join(paths))
-                f.write("\n\n")  
-            continue
+            selected_chans   = [chan_ids[i] for i in selected_idx]
+            selected_signals = signal[selected_idx, :]
+
+            full_data[task]["selected_chans"]  = selected_chans
+            full_data[task]["selected_signal"] = selected_signals
+
+        # # Sanity checks
+        # if not all(sig.shape[0] == selected_signals[0].shape[0]
+        #            for sig in selected_signals
+        #         ):
+        #     error_msg = "Num chans differs across runs "
+
+        # if not all(chans == chan_id[0] for chans in chan_id):
+        #     error_msg += "Chan ids do not match across runs "
+
+        # if not all(rate == samp_rates[0] for rate in samp_rates):
+        #     error_msg += "Sampling rate differs across runs "
+
+        # if error_msg:
+        #     with open(f"processed_data/{log_file}", "a") as f:
+        #         f.write(f"{patient}, {visit}, {error_msg}\n")
+        #         f.write("\n".join(paths))
+        #         f.write("\n\n")  
+        #     continue
 
         # Sample rate
-        sr = samp_rates[0]
+        sr = sample_rates[0]
 
         # Save
         print(f"Saving .mat data for {patient} {visit}")
-        for i, chan in enumerate(chan_id[0]):
+        for i, chan in enumerate(chans_in_all_runs):
 
             print(f"concatenating {patient}, {visit}, channel {chan}")
-            combined_signals = np.concatenate(
-                [sig[i, :] for sig in selected_signals]
-            )
 
-            # Create .mat structure
             mat_struct = {
-                "data": combined_signals, 
-                "sr": sr,
-                "runs": sorted_paths,
-                "samps_per_run": samples
+                "data": np.concatenate([
+                    data["selected_signal"][i, :]
+                    for data in full_data.values()
+                ]),
+                "sr":       sr,
+                "tasks":    list(full_data.keys()),
+                "paths":    [data["path"] for data in full_data.values()],
+                "samples":  [data["samples"] for data in full_data.values()]
             }
 
             save_path = f"processed_data/{patient}/"
@@ -141,7 +183,7 @@ for patient, visits in groups.items():
             # Save .mat
             savemat(save_path + save_name, mat_struct)
         
-        del signals
+        del mat_struct
         del selected_signals
         del sorted_data
         gc.collect()
@@ -156,3 +198,5 @@ for patient, visits in groups.items():
 
 
 
+
+# %%

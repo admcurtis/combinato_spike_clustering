@@ -1,16 +1,16 @@
 #%% functions
-def sort_data_chronologically(paths, visit_data):
+def sort_data_chronologically(paired):
     """
     Takes a list of paths and a list of loaded ns6 files and sorts them chronologically
+    paired: a list of two-element tuples where the first element is a path and the 
+        second element is a load NsxFile
     """
-    paired = list(zip(paths, visit_data))
     paired_sorted = sorted(
         paired,
         key=lambda x: x[1].basic_header["TimeOrigin"]
     )   
-    paths_sorted, visit_data_sorted = zip(*paired_sorted)
 
-    return list(paths_sorted), list(visit_data_sorted)
+    return paired_sorted
 
 
 def get_odd_chans(chan_ids):
@@ -63,6 +63,7 @@ def get_selected_chans(chan_ids, chans_in_all_runs):
     Returns a list of lists with only the channels that were manually selected.
     The manually selected channels need to be stored in a csv and loaded in. 
     """
+
     selected_idxs = []
     for chan_lst in chan_ids:
 
@@ -78,6 +79,25 @@ def get_selected_chans(chan_ids, chans_in_all_runs):
         selected_chans.append(selected)
 
     return selected_chans, selected_idxs
+
+
+def get_select_chans(full_data, chans_in_all_runs):
+
+    for task, data in full_data.items():
+
+        chan_ids = data["chan_ids"]
+        signal   = data["signal"]
+        selected_idx = [
+            i for i, chan in enumerate(chan_ids) if chan in chans_in_all_runs
+        ]
+
+        selected_chans   = [chan_ids[i] for i in selected_idx]
+        selected_signals = signal[selected_idx, :]
+
+        full_data[task]["selected_chans"]  = selected_chans
+        full_data[task]["selected_signal"] = selected_signals
+
+
 
 
 def get_selected_signals(signals, chan_indx):
