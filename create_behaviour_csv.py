@@ -16,6 +16,8 @@ behave_files = [
 # %% Process Study data
 study_dfs = []
 test_dfs = []
+test_diffs = []
+eeg_diffs = []
 for behave_path in behave_files:
 
     patient = next(
@@ -33,6 +35,8 @@ for behave_path in behave_files:
     )
 
     behave_data = behave_data["eegData"]
+
+    eeg_diffs.append(np.nanmax(behave_data.time) - np.nanmin(behave_data.time))
 
     # Study df
     study_df = pd.DataFrame(
@@ -100,6 +104,8 @@ for behave_path in behave_files:
         ]
     )
 
+    test_diffs.append((times_df.max() - times_df.min()).to_frame(name="range"))
+
     responses_df = pd.DataFrame(
         {
             "recRT":    behave_data.Test.recRT.flatten("F"),
@@ -131,6 +137,13 @@ full_test_data = pd.concat(
     test_dfs,
     axis=0
 )
+
+# %%
+# Plot showing multimodal histogram 
+full_test_data["cue_onset"][full_test_data["cue_onset"] < 3000].hist(bins=20)
+
+for i in test_diffs:
+    print(i)
 
 # %% 
 # Load unclustered data to get sample rate and number of samples per run data

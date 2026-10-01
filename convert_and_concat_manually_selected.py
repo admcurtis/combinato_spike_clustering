@@ -11,7 +11,7 @@ from convert_ns6_utils import sort_data_chronologically
 import gc
 
 #%%
-sensor_selections = pd.read_csv("./practice_sensor_selection.csv")
+sensor_selections = pd.read_csv("./selected_sensors.csv")
 
 #%%
 os.makedirs("processed_data", exist_ok=True)
@@ -24,6 +24,8 @@ ns6_files = [
     if "Visit" in str(p)
     and "Baseline" not in str(p)
     and "Closed Loop" not in str(p)
+    and "Macro LFP Reference" not in str(p)
+    and len(p.parts) == 6 # ensures only ns6 files with path patientX/visitX/task/*.ns6
 ]
 
 # %% Patient x visit x path dictionary

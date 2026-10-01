@@ -2,8 +2,15 @@
 
 The scripts found here convert `.ns6` files—containing time series for each channel per participant—into separate `.mat` files.  
 Each `.mat` file contains the data for a single channel.
+After conversion, Combinato can be used to cluster the data.
 
-`.ns6` files can be converted to `.mat` using `convert_ns6_to_mat.py`.
+
+The conversion script requires you to provide a `.csv` containing the sensors you want to include.
+To select the sensors use `create_sensor_inspect_sheet.py` to create a csv containing labels and statistics from each sensor.
+
+Copy and paste the pateint, visit, path (run), and chan_id for each selected sensor into a separate csv called `selected_sensors.csv`.
+
+`.ns6` files can be converted to `.mat` using `convert_and_concat_manualy_selected.py`. This script will use `selected_sensors.csv` to extract only the selected signals and concatenate all run within the same patient/visit.
 
 This script requires the use of [BlackRock's Python Utilities](https://github.com/BlackrockNeurotech/.Python-Utilities). The brpylib folder needs to be in `Lib/site-packages/` directory of the Python environement.
 
@@ -11,9 +18,15 @@ Once converted, spike sorting can be performed from the command line using `clus
 
 The clustering requires a [Combinato installation](https://github.com/jniediek/combinato/).
 
-Once clustered, `main.py` can be used to align the clusters with the behavioural data and and to detect concept cells. Concept cells are detected using the procedure presented in [Quiroga et al. (2005)](https://pubmed.ncbi.nlm.nih.gov/15973409/). Use the `--save` flag to ensure intermediate files are saved.
+Once clustered, the indidividual tasks can be deconcatenated using `slice_runs_after_clustering.py`
 
-`--save` will result in the following files being saved:
+Spikes, their times and metadata can then be arranged into a csv using `create_spike_csv.py`
+
+Currently working on the script `create_behaviour_csv.py`. Some behavioural files appear to be in ms where as others seem to be in seconds. thi needs fixing. It is unclear whether the behavioural data and the ieeg data begin at the same time. Need to figure out how to align them. 
+
+
+
+## OLD
 
 - `all_spike_waveforms.csv` a csv containing waveforms for all the detected spikes along with labels concerning what clusters they belonged to and which stimilus was on the screen during the spike. If the spike occured during a baseline period, the stimulus will be "BASELINE".
 

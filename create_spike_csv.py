@@ -74,7 +74,13 @@ unique_values = pd.Series(
 )
 print(unique_values)
 
+full_df.reset_index(
+    inplace=True,
+    drop=True
+)
+
 full_df.to_csv(
     "all_spikes.csv",
     index=False
 )
+# %%

@@ -44,8 +44,9 @@ for patient in patients:
         # Load unclustered data to get sample rate and number of samples per run data
         concat_data = loadmat(patient / f"Patient{ppt}_Visit{visit}_sensor{sensor}.mat")
         sr = int(concat_data["sr"].squeeze())
-        runs = concat_data["runs"]
-        samps_per_run = concat_data["samps_per_run"].squeeze()
+        tasks = concat_data["tasks"]
+        paths = concat_data["paths"]
+        samps_per_run = concat_data["samples"]
 
         # Times to slice at. Spikes are in seconds, so use samples over sample rate
         slice_times = np.cumsum(samps_per_run)  / sr
@@ -62,15 +63,15 @@ for patient in patients:
                 (spikes_labs_times[:,-1] >= start) & (spikes_labs_times[:,-1] < end)
             ]
 
-            # normalise times
+            # Centre times so that they are relative to the start of the run
             time_slice[:, -1] = time_slice[:, -1] - start
 
             new_slices.append(time_slice)
             
 
-        for run, data, samples in zip(runs, new_slices, samps_per_run):
+        for task, data, samples, path in zip(tasks, new_slices, samps_per_run, paths):
             
-            print(f"Processing: {run} containing {data.shape[0]} spikes")
+            print(f"Processing: {task} containing {data.shape[0]} spikes")
 
 
             # Create .mat strcuture and save
@@ -78,13 +79,15 @@ for patient in patients:
                 "spikes": data[:, :-3], # All columns except last 3
                 "labels": data[:, -3:-1], # Second and third to last columns
                 "times": data[:, -1] , # Last column
-                "run": run,
+                "task": task,
+                "path": path,
                 "samples": samples,
                 "sr": sr
             }
 
-            task = Path(run).parent.stem
-
             # Save .mat
             save_name = f"Patient{ppt}_Visit{visit}_sensor{sensor}_{task}.mat"
             savemat(patient / "sliced_after_clustering" / save_name, mat_struct)
+
+print("DONE!")
+# %%
