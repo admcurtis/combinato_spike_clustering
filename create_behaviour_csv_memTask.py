@@ -10,7 +10,7 @@ root = Path("../ieeg_data")
 # Patient x visit x path dictionary
 behave_files = [
     p for p in root.rglob("*assMemData.mat")
-    if len(p.parts) == 6
+    if len(p.parts) == 5
 ]
 
 # %% Process Study data
