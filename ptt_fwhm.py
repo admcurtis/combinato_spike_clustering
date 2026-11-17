@@ -1,7 +1,3 @@
-# %% Set interactive backend to open plots in a separate window
-# type: ignore
-%matplotlib qt
-
 # %%
 import numpy as np
 import pandas as pd
@@ -12,19 +8,6 @@ from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
-
-# %% Constants
-WF_COLS = [f"s{i}" for i in range(64)]
-PATIENT = 10
-VISIT = 1
-SENSOR = 1
-
-patient = f"Pateint{PATIENT}"
-visit = f"Visit{VISIT}"
-sensor = f"sensor{SENSOR}"
-
-# %%
-data = pd.read_csv("all_spikes.csv")
 
 # %% Metrics
 def fwhm(wf, spike_idx=19, baseline=0.0):
@@ -124,7 +107,7 @@ def peak_to_trough(wf):
     spike_idx, hyperpol_peak_idx = hyperpol_peak(wf)
     peak = wf[spike_idx]
     if hyperpol_peak_idx is None:
-        return np.nan
+        return np.nan, peak
     p2t_dist = peak - wf[hyperpol_peak_idx]
     return p2t_dist, peak
 
@@ -134,6 +117,7 @@ def plot_fwhm(wf, baseline=0.0):
     Plot a waveform with its FWHM marked.
     """
     y = np.ravel(wf)
+    wf = y  # plain array so integer indexing is positional even if a Series was passed
 
     width, left, right, half_level = fwhm(y, baseline=baseline)
     spike_idx, hyperpole_peak_idx = hyperpol_peak(wf)
@@ -150,23 +134,25 @@ def plot_fwhm(wf, baseline=0.0):
         linewidth=2,
         label=f"FWHM = {width:.2f} samples")
 
-    ax.hlines(
-        wf[spike_idx],
-        spike_idx,
-        hyperpole_peak_idx,
-        color="g",
-        linewidth=2,
-        linestyles="dashed"
-    )
+    # Peak-to-trough lines only exist if the waveform hyperpolarises
+    if hyperpole_peak_idx is not None:
+        ax.hlines(
+            wf[spike_idx],
+            spike_idx,
+            hyperpole_peak_idx,
+            color="g",
+            linewidth=2,
+            linestyles="dashed"
+        )
 
-    ax.vlines(
-        x=hyperpole_peak_idx,
-        ymin=wf[spike_idx],
-        ymax=wf[hyperpole_peak_idx],
-        color="g",
-        linewidth=2,
-        label=f"P2T = {p2t}"
-    )
+        ax.vlines(
+            x=hyperpole_peak_idx,
+            ymin=wf[spike_idx],
+            ymax=wf[hyperpole_peak_idx],
+            color="g",
+            linewidth=2,
+            label=f"P2T = {p2t:.2f}"
+        )
     
     ax.axhline(
         baseline,
@@ -184,7 +170,7 @@ def plot_fwhm(wf, baseline=0.0):
     return fig, ax
 
 # %% Filtering
-def add_waveform_stats(df):
+def add_waveform_stats(df, WF_COLS):
     wf_array = df[WF_COLS].to_numpy()
     df = df.copy()
     df["widths"] = np.apply_along_axis(fwhm, axis=1, arr=wf_array)[:, 0]
@@ -219,7 +205,7 @@ def plot_classes(group_df):
     plt.show()
 
 
-def plot_groups_3d(*group_dfs, standardise=False, model="lasso"):
+def plot_groups_3d(*group_dfs, standardise=False, model="lasso", show=True):
     cols = ["widths", "p2t", "peak"]
     arrays = [df[cols].to_numpy(dtype=float) for df in group_dfs]
 
@@ -245,7 +231,10 @@ def plot_groups_3d(*group_dfs, standardise=False, model="lasso"):
     ax.legend(title="Neuron group")
     ax.set_title(f"{model} AUC = {auc:.3f} ± {auc_sd:.3f}")
 
-    plt.show()
+    if show:
+        plt.show()
+
+    return fig, ax
 
 # %% Models
 def neuron_auc_test(
@@ -270,19 +259,12 @@ def neuron_auc_test(
 
     model = make_pipeline(StandardScaler(), clf) if standardise else clf
 
+    counts = [len(a) for a in arrays]
+    if min(counts) < n_splits:
+        return np.nan, np.nan   # skip; plot still draws, title shows "AUC = nan ± nan"
+
     scoring = "roc_auc" if len(arrays) == 2 else "roc_auc_ovr"
     cv = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=seed)
     scores = cross_val_score(model, X, y, cv=cv, scoring=scoring)
 
     return scores.mean(), scores.std()
-
-
-# %%
-data_mat = np.array(data[WF_COLS])
-wf = data_mat[200,:]
-plot_fwhm(wf)
-
-# %%
-data = add_waveform_stats(data)
-groups = get_groups(data, patient, visit, sensor)
-plot_groups_3d(groups[1], groups[2])
