@@ -71,7 +71,6 @@ for id, df in grouped_clusters:
         plt.close(fig)
 
 
-
 # %%
 data_mat = np.array(data[WF_COLS])
 wf = data_mat[200,:]
@@ -86,4 +85,13 @@ groups = metric.get_groups(data, patient, visit, sensor)
 metric.plot_groups_3d(groups[1], groups[2], standardise=True)
 
 
+# %%
+def plot_3d(data, patient, visit, sensor, c1, c2):
+    patient = f"Patient{patient}"
+    visit = f"Visit{visit}"
+    sensor = f"sensor{sensor}"
+
+    groups = metric.get_groups(data, patient, visit, sensor)
+    g1, g2 = groups[c1], groups[c2]
+    metric.plot_groups_3d(g1, g2, standardise=True, show=True)
 
