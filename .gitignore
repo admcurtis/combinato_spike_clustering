@@ -19,6 +19,8 @@ processed_data_old/
 clustering_plots/
 clustering_plot
 */
+build_report.py
+report_data.py
 
 # Data
 *.csv

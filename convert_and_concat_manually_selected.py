@@ -87,8 +87,12 @@ for patient, visits in groups.items():
         try:
             chan_lists = [set(chan_list) for _, chan_list in chans_per_run]
             chan_set = set.intersection(*chan_lists)
-            # Convert set to list to ensure order preservation
-            chans_in_all_runs = [chan for chan in chan_lists[0] if chan in chan_set] 
+            # Iterate the first run's ordered list (not a set) so the order is
+            # deterministic. Signals are matched to channels by ID when saving,
+            # so this order only controls the order files are written in.
+            chans_in_all_runs = sorted(
+                {chan for chan in chans_per_run[0][1] if chan in chan_set}
+            )
         except TypeError:
             with open(f"processed_data/{log_file}", "a") as f:
                 f.write(f"{patient}, {visit}: No channels shared in all runs\n\n")
@@ -104,15 +108,24 @@ for patient, visits in groups.items():
 
         full_data = {}
         sample_rates = []
+        task_counts = defaultdict(int)
         for path, data in sorted_data:
             temp_data = data.getdata()
             task_name = path.split("/")[-2]
-            signal = np.array(temp_data["data"]).squeeze() 
+            signal = np.array(temp_data["data"]).squeeze()
             sr = float(temp_data["samp_per_s"])
 
             sample_rates.append(sr)
 
-            full_data[task_name] = {
+            # Ensure task labels don't repeat to prevent subsequent files from overwriting
+            task_counts[task_name] += 1
+            task_label = (
+                task_name if task_counts[task_name] == 1
+                else f"{task_name}_{task_counts[task_name]}"
+            )
+
+            full_data[path] = {
+                "task":      task_label,
                 "path":      path,
                 "signal":    signal,
                 "chan_ids":  temp_data["elec_ids"],
@@ -123,8 +136,9 @@ for patient, visits in groups.items():
             del temp_data
             gc.collect()
 
-        # Add keys to the selected channels and their respective signals
-        for task, data in full_data.items():
+        # Full data currently contains data for all channels. Here, we select only the
+        # channels present in "selected_sensors.csv"
+        for run_path, data in full_data.items():
 
             chan_ids = data["chan_ids"]
             signal   = data["signal"]
@@ -135,44 +149,41 @@ for patient, visits in groups.items():
             selected_chans   = [chan_ids[i] for i in selected_idx]
             selected_signals = signal[selected_idx, :]
 
-            full_data[task]["selected_chans"]  = selected_chans
-            full_data[task]["selected_signal"] = selected_signals
+            full_data[run_path]["selected_chans"]  = selected_chans
+            full_data[run_path]["selected_signal"] = selected_signals
 
-        # # Sanity checks
-        # if not all(sig.shape[0] == selected_signals[0].shape[0]
-        #            for sig in selected_signals
-        #         ):
-        #     error_msg = "Num chans differs across runs "
-
-        # if not all(chans == chan_id[0] for chans in chan_id):
-        #     error_msg += "Chan ids do not match across runs "
-
-        # if not all(rate == samp_rates[0] for rate in samp_rates):
-        #     error_msg += "Sampling rate differs across runs "
-
-        # if error_msg:
-        #     with open(f"processed_data/{log_file}", "a") as f:
-        #         f.write(f"{patient}, {visit}, {error_msg}\n")
-        #         f.write("\n".join(paths))
-        #         f.write("\n\n")  
-        #     continue
+        # Every selected channel must exist in every run's file, otherwise the
+        # per-channel lookup below would fail
+        missing = {
+            data["path"]: sorted(set(chans_in_all_runs) - set(data["selected_chans"]))
+            for data in full_data.values()
+            if set(chans_in_all_runs) - set(data["selected_chans"])
+        }
+        if missing:
+            msg = f"Selected channels missing from .ns6 files: {missing}"
+            print(f"{patient}, {visit}: {msg}")
+            with open(f"processed_data/{log_file}", "a") as f:
+                f.write(f"{patient}, {visit}: {msg}\n\n")
+            continue
 
         # Sample rate
         sr = sample_rates[0]
 
         # Save
         print(f"Saving .mat data for {patient} {visit}")
-        for i, chan in enumerate(chans_in_all_runs):
+        for chan in chans_in_all_runs:
 
             print(f"concatenating {patient}, {visit}, channel {chan}")
 
+            # Look up this channel's row by ID in each run, rather than by
+            # position, so the signal always matches the sensor in the filename
             mat_struct = {
                 "data": np.concatenate([
-                    data["selected_signal"][i, :]
+                    data["selected_signal"][data["selected_chans"].index(chan), :]
                     for data in full_data.values()
                 ]),
                 "sr":       sr,
-                "tasks":    list(full_data.keys()),
+                "tasks":    [data["task"] for data in full_data.values()],
                 "paths":    [data["path"] for data in full_data.values()],
                 "samples":  [data["samples"] for data in full_data.values()]
             }
@@ -191,14 +202,3 @@ for patient, visits in groups.items():
         gc.collect()
 
 
-
-
-
-
-
-
-
-
-
-
-# %%

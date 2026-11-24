@@ -83,4 +83,3 @@ full_df.to_csv(
     "all_spikes.csv",
     index=False
 )
-# %%

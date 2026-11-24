@@ -44,9 +44,10 @@ for patient in patients:
         # Load unclustered data to get sample rate and number of samples per run data
         concat_data = loadmat(patient / f"Patient{ppt}_Visit{visit}_sensor{sensor}.mat")
         sr = int(concat_data["sr"].squeeze())
-        tasks = concat_data["tasks"]
-        paths = concat_data["paths"]
-        samps_per_run = concat_data["samples"]
+        # savemat stores lists as 1xN arrays and pads strings, so flatten and strip
+        tasks = [str(t).strip() for t in np.ravel(concat_data["tasks"])]
+        paths = [str(p).strip() for p in np.ravel(concat_data["paths"])]
+        samps_per_run = np.ravel(concat_data["samples"])
 
         # Times to slice at. Spikes are in seconds, so use samples over sample rate
         slice_times = np.cumsum(samps_per_run)  / sr
@@ -90,4 +91,3 @@ for patient in patients:
             savemat(patient / "sliced_after_clustering" / save_name, mat_struct)
 
 print("DONE!")
-# %%
