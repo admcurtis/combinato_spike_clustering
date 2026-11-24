@@ -10,10 +10,10 @@ import os
 from convert_ns6_utils import sort_data_chronologically
 import gc
 
-#%%
+#%% Load selections
 sensor_selections = pd.read_csv("./selected_sensors.csv")
 
-#%%
+# %% Glob .ns6 files 
 os.makedirs("processed_data", exist_ok=True)
 log_file = "run_errors.txt"
 
@@ -63,19 +63,38 @@ for patient, visits in groups.items():
             (run, list(df["chan_id"])) for run, df in selected_sensors.groupby("run")
         ]
 
-        # Log an error if there are runs with no sensors
-        if len(chans_per_run) != len(paths):
-            msg = "Selection does not contain channels from all runs"
+        # Check the runs in the CSV are exactly the .ns6 files found for this visit.
+        def run_key(p):
+            parts = Path(str(p).replace("\\", "/")).parts
+            return parts[-2], parts[-1]
+
+        csv_runs   = {run_key(run) for run, _ in chans_per_run}
+        found_runs = {run_key(p) for p in paths}
+
+        # Selected runs with no matching file: skip the whole visit, since this
+        # more likely means a wrong path or missing data
+        not_found = csv_runs - found_runs
+        if not_found:
+            msg = f"Selected runs not found in .ns6 files: {sorted(not_found)}"
             print(f"{patient}, {visit}: {msg}")
             with open(f"processed_data/{log_file}", "a") as f:
                 f.write(f"{patient}, {visit}: {msg}\n\n")
             continue
 
+        # Files with no selected channels: leave those runs out of this visit
+        # and carry on with the rest
+        unselected = found_runs - csv_runs
+        if unselected:
+            msg = f"Warning: files with no selection, left out of this visit: {sorted(unselected)}"
+            print(f"{patient}, {visit}: {msg}")
+            with open(f"processed_data/{log_file}", "a") as f:
+                f.write(f"{patient}, {visit}: {msg}\n\n")
+            paths = [p for p in paths if run_key(p) in csv_runs]
+
         # Check to see whether any runs have repeating channel names
         repeating = [
             (run, arr) for run, arr in chans_per_run if len(set(arr)) < len(arr)
         ]
-
         if repeating:
             msg = "Some runs have channel names that repeat"
             print(f"{patient}, {visit}: {msg}")
@@ -84,40 +103,43 @@ for patient, visits in groups.items():
             continue
 
         # Get channels that have been selected and occur in all runs. 
-        try:
-            chan_lists = [set(chan_list) for _, chan_list in chans_per_run]
-            chan_set = set.intersection(*chan_lists)
-            # Iterate the first run's ordered list (not a set) so the order is
-            # deterministic. Signals are matched to channels by ID when saving,
-            # so this order only controls the order files are written in.
-            chans_in_all_runs = sorted(
-                {chan for chan in chans_per_run[0][1] if chan in chan_set}
-            )
-        except TypeError:
+        chan_lists = [set(chan_list) for _, chan_list in chans_per_run]
+        chan_set = set.intersection(*chan_lists)
+        chans_in_all_runs = sorted(int(c) for c in chan_set)
+
+        if not chans_in_all_runs:
+            msg = "No channels shared in all runs"
+            print(f"{patient}, {visit}: {msg}")
             with open(f"processed_data/{log_file}", "a") as f:
-                f.write(f"{patient}, {visit}: No channels shared in all runs\n\n")
+                f.write(f"{patient}, {visit}: {msg}\n\n")
             continue
 
-        # Load the .ns6 file for this visit
-        visit_data = [(f, NsxFile(f)) for f in paths]
+        # Log channels selected in some runs but not others
+        dropped = sorted(int(c) for c in set.union(*chan_lists) - chan_set)
+        if dropped:
+            msg = f"Warning: channels not selected in all runs, so not saved: {dropped}"
+            print(f"{patient}, {visit}: {msg}")
+            with open(f"processed_data/{log_file}", "a") as f:
+                f.write(f"{patient}, {visit}: {msg}\n\n")
 
+        # Load the .ns6 file for this visit and sort
+        visit_data = [(f, NsxFile(f)) for f in paths]
         sorted_data = sort_data_chronologically(visit_data)
 
-        del visit_data # save memory
-        gc.collect()
-
+        # Construct data structure containing data from all channels in the .ns6
         full_data = {}
         sample_rates = []
         task_counts = defaultdict(int)
         for path, data in sorted_data:
             temp_data = data.getdata()
-            task_name = path.split("/")[-2]
+            task_name = Path(path).parent.name
             signal = np.array(temp_data["data"]).squeeze()
             sr = float(temp_data["samp_per_s"])
 
             sample_rates.append(sr)
 
-            # Ensure task labels don't repeat to prevent subsequent files from overwriting
+            # Ensure task labels don't repeat to prevent subsequent files from
+            # overwriting olders ones.
             task_counts[task_name] += 1
             task_label = (
                 task_name if task_counts[task_name] == 1

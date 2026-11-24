@@ -8,6 +8,11 @@ PATH=$PATH:$SCRIPT_DIR/combinato
 PYTHONPATH=$PYTHONPATH:$SCRIPT_DIR/combinato
 export PATH PYTHONPATH
 
+# Save plots straight to file without Qt. With a display available, matplotlib
+# otherwise picks its Qt backend, and the combinato env has two Qt builds
+# (conda qt-main and pip PyQt5-Qt5) that abort Python when both load.
+export MPLBACKEND=Agg
+
 # Loop over participants and perform clustering
 for ppt_dir in */; do
 
@@ -18,8 +23,13 @@ for ppt_dir in */; do
         css-extract --matfile $mat_file --matfile-scale-factor 0.25;
     done
 
-    css-mask-artifacts
-    css-plot-extracted
+    # Pass channel files explicitly: with no arguments these tools only find
+    # folders matching options['folder_patterns'] in combinato/options.py,
+    # which doesn't match PatientNN_VisitN_sensorN.
+    for data_file in Patient*/data_*.h5; do
+        css-mask-artifacts --file "$data_file"
+    done
+    css-plot-extracted --datafiles Patient*/data_*.h5
 
     for directory in Patient*/; do
         cd $directory
