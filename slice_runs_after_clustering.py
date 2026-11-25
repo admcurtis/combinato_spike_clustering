@@ -54,7 +54,6 @@ for patient in patients:
         spikes_labs_times = np.column_stack([spikes, labels, times])
 
         # Load sample rate, task names, paths and samples per run from the unclustered
-        # .mat. Skip the raw signal ("data"), which is by far the largest variable
         concat_data = loadmat(
             patient / f"Patient{ppt}_Visit{visit}_sensor{sensor}.mat",
             variable_names=["sr", "tasks", "paths", "samples"]
