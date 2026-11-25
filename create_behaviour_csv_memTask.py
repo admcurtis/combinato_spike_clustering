@@ -138,15 +138,3 @@ full_test_data = pd.concat(
     axis=0
 )
 
-# %%
-# Plot showing multimodal histogram 
-full_test_data["cue_onset"][full_test_data["cue_onset"] < 3000].hist(bins=20)
-
-for i in test_diffs:
-    print(i)
-
-# %% 
-# Load unclustered data to get sample rate and number of samples per run data
-concat_paths = Path(f"./processed_data/{patient}").glob("*.mat")
-concat_data = loadmat(next(concat_paths))
-
