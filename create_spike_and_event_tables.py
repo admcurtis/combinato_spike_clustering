@@ -28,12 +28,18 @@ def run(data_path ="./processed_data/"):
         waveforms, spike_times = spike_utils.load_spike_data(
             sensor_path, ppt_num, sensor
         )
-        cluster_labels = spike_utils.load_cluster_labels(sensor_path)
+        cluster_labels, sorted_idx = spike_utils.load_cluster_labels(
+            sensor_path, return_index=True
+        )
 
         # Continue if no cluster labels (sensor detected no spikes)
         if cluster_labels is None:
             print(f"No units detected for ppt{ppt_num} sensor{sensor}")
             continue
+
+        # Combinato only sorts spikes that weren't masked as artifacts, so the labels
+        # line up with spike_times[sorted_idx], not with every spike in the .h5
+        waveforms, spike_times = waveforms[sorted_idx], spike_times[sorted_idx]
 
         spikes_per_cluster = spike_utils.sort_spikes_by_cluster(
             cluster_labels, spike_times

@@ -32,27 +32,36 @@ def load_spike_data(sensor_path, ppt_num, sensor, visit, remove_artifacts=True):
     return neg_spikes, neg_times
 
 
-def load_cluster_labels(sensor_path):
+def load_cluster_labels(sensor_path, return_index=False):
     """
     Loads the labels of the clusters. Returns an array of indices with which to filter
     the spike data.
-    Returns none if file not found. 
+    Returns none if file not found.
     File not found indicates that Combinato did not detect any clusters on this sensor.
+
+    If return_index is True, returns (labels, index) instead, or (None, None) if the
+    file isn't found. Index is sort_cat.h5's "index": the rows of the data_*.h5 spike
+    and time arrays that the labels belong to. Combinato only sorts spikes that
+    weren't masked as artifacts, so labels line up with spikes[index], not with every
+    spike in the .h5.
     """
     try:
         neg_sort_file = f"{sensor_path}/sort_neg_ada/sort_cat.h5"
         with h5py.File(neg_sort_file, "r") as neg_sort_data:
             neg_cluster_idx = np.array(neg_sort_data["classes"])
             neg_groups = np.array(neg_sort_data["groups"])
+            neg_index = np.array(neg_sort_data["index"])
 
             # Pair groups with classes
             lookup_dict = dict(zip(neg_groups[:, 0], neg_groups[:, 1]))
             map_groups_to_class = np.array([lookup_dict[x] for x in neg_cluster_idx])
             final_labels = np.column_stack((neg_cluster_idx, map_groups_to_class))
 
+            if return_index:
+                return final_labels, neg_index
             return final_labels
     except FileNotFoundError:
-        return None
+        return (None, None) if return_index else None
 
 
 def sort_spikes_by_cluster(cluster_labs, spike_times) -> dict[str, np.ndarray[float]]:

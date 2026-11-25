@@ -18,7 +18,12 @@ for patient in patients:
 
     for file in concat_mat_files:
 
-        ppt, visit, sensor = re.findall(r"\d+", file.stem)
+        # Visit can contain letters (e.g. "Visit2b"), so don't just grab the digits
+        name_match = re.fullmatch(r"Patient(\d+)_Visit([^_]+)_sensor(\d+)", file.stem)
+        if name_match is None:
+            print(f"Skipping {file.name}: name doesn't match PatientN_VisitN_sensorN")
+            continue
+        ppt, visit, sensor = name_match.groups()
         print(f"Processing: Patient{ppt}, visit{visit}, Sensor{sensor}")
 
         clustered_path = patient / f"Patient{ppt}_Visit{visit}_sensor{sensor}"
@@ -32,11 +37,18 @@ for patient in patients:
             remove_artifacts=False
         )
         
-        # Load cluster labels
-        labels = load_cluster_labels(clustered_path)
+        # Load cluster labels, plus the rows of the spike arrays they belong to
+        labels, sorted_idx = load_cluster_labels(clustered_path, return_index=True)
         if labels is None:
             print("No labels found! Assuming no neurons for this sensor")
             continue
+
+        # Combinato only sorts spikes that weren't masked as artifacts, so the labels
+        # line up with spikes[sorted_idx], not with every spike in the .h5
+        n_unsorted = len(times) - len(sorted_idx)
+        if n_unsorted:
+            print(f"Dropping {n_unsorted} spikes Combinato didn't sort (masked artifacts)")
+        spikes, times = spikes[sorted_idx], times[sorted_idx]
 
         # Attach labels and times to spike waveform array as the final two columns
         spikes_labs_times = np.column_stack([spikes, labels, times])
