@@ -21,6 +21,7 @@ clustering_plot
 */
 build_report.py
 report_data.py
+report.md
 
 # Data
 *.csv

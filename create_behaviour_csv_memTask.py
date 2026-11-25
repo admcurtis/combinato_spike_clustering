@@ -43,6 +43,7 @@ for behave_path in behave_files:
         {
             "patient": patient,
             "visit":   visit,
+            "file_path": str(behave_path),
             "event":   behave_data.Study.Event,
             "pair":    behave_data.Study.Pair
         }
@@ -86,6 +87,7 @@ for behave_path in behave_files:
         {
             "patient": patient,
             "visit":   visit,
+            "file_path": str(behave_path),
             "event": behave_data.Test.Event.flatten("F"),
             "old_new": behave_data.Test.OldNew.flatten("F"),
             "cue_type": behave_data.Test.CueType.flatten("F"),
@@ -137,4 +139,8 @@ full_test_data = pd.concat(
     test_dfs,
     axis=0
 )
+
+# %% Save
+full_study_data.to_csv("memTask_study_behaviour.csv", index=False)
+full_test_data.to_csv("memTask_test_behaviour.csv", index=False)
 
